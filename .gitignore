@@ -2,3 +2,5 @@
 nm-morph
 *.o
 *.bak
+moc*
+
