@@ -48,7 +48,7 @@ private:
     void ChangeColorPen(QColor);
     void CrossDisolve(int);
 
-    void ArreglameLaVida();
+    void ProcessImages();
 
     int wimg, himg;
     double VARA, VARP, VARB;

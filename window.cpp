@@ -1,10 +1,18 @@
+/* code by Rafael Robledo, 
+ * posted at http://code.google.com/p/nm-morph/,
+ * licensed under Apache License 2.0. */
+
+/* translations by Google Translate! */
+/* let me know if you have better translations for me. */
+
+/* to generate the makefile, qmake -o Makefile nm-morph.pro */
+
 #include "window.h"
 
 #define MAX_POINTS 5
 #define lambda 10
 
 MainWindow::MainWindow(QWidget *parent) : QWidget(parent) {
-    //colorPen = new QColor(Qt::red);
     wimg = himg = 0;
     VARA = VARP = 0.0f;
 
@@ -12,44 +20,44 @@ MainWindow::MainWindow(QWidget *parent) : QWidget(parent) {
     this->resize(1000, 660);
     this->setStyleSheet("QAbstractButton, QLabel { padding: 6px 10px; };");
 
-    // Layout para toda la ventana
+    // Layout for the entire window
     QHBoxLayout *superLayout = new QHBoxLayout();
 
-    // Layout para componentes principales
-    // (cargar imagenes y controles)
+    // Layout for main components
+    // (includes images, controls)
     QVBoxLayout *mainLayout = new QVBoxLayout();
 
-    // Layout para cargar imagenes
+    // Layout for images
     QHBoxLayout *imgLayout = new QHBoxLayout();
 
-    // Layout para controles
+    // Layout for controls
     QHBoxLayout *headLayout = new QHBoxLayout();
 
-    // Layout para Tipo de linea a usar
-    QGroupBox *opcGrp1 = new QGroupBox(tr("Tipo de linea que desea usar"));
+    // Layout for linetype selection
+    QGroupBox *opcGrp1 = new QGroupBox(tr("Line type"));
     opcGrp1->setMinimumHeight(80);
     opcGrp1->setMaximumHeight(80);
     QFormLayout *opcForm1 = new QFormLayout();
     opcGrp1->setLayout(opcForm1);
-    radio[0] = new QRadioButton(tr("Segmentos de lineas rectas"));
+    radio[0] = new QRadioButton(tr("Line segments"));
     radio[0]->setStyleSheet("padding: 1px");    
     radio[0]->setChecked(true);    
-    radio[1] = new QRadioButton(tr("Linea continua a mano"));
+    radio[1] = new QRadioButton(tr("Freehand continuous line"));
     radio[1]->setStyleSheet("padding: 1px");
     connect(radio[0], SIGNAL(toggled(bool)), this, SLOT(on_radioLinea_toogled(bool)));
     connect(radio[1], SIGNAL(toggled(bool)), this, SLOT(on_radioLinea_toogled(bool)));
     opcForm1->addRow(radio[0]);
     opcForm1->addRow(radio[1]);
 
-    // Layout para Controles basicos
-    QGroupBox *opcGrp2 = new QGroupBox(tr("Controles"));
+    // Layout for basic Controls
+    QGroupBox *opcGrp2 = new QGroupBox(tr("Controls"));
     opcGrp2->setMinimumHeight(150);
     opcGrp2->setMaximumHeight(150);
     QFormLayout *opcForm2 = new QFormLayout();
     opcGrp2->setLayout(opcForm2);
-    btnColor = new QPushButton("Color de pincel: ");
-    btnProcess = new QPushButton("Realizar morphing");
-    btnSave = new QPushButton("Guardar imagen resultante");
+    btnColor = new QPushButton("Color");
+    btnProcess = new QPushButton("Process");
+    btnSave = new QPushButton("Save resulting image");
     lblColor = new QLabel();
     lblColor->setAutoFillBackground(true);        
     connect(btnColor,   SIGNAL(clicked()), this, SLOT(on_btnColor_clicked()));
@@ -59,8 +67,8 @@ MainWindow::MainWindow(QWidget *parent) : QWidget(parent) {
     opcForm2->addRow(btnProcess);
     opcForm2->addRow(btnSave);
 
-    // Layout para Parametros de morphing
-    QGroupBox *opcGrp3 = new QGroupBox(tr("Parámetros"));
+    // Layout for morphing Parameters
+    QGroupBox *opcGrp3 = new QGroupBox(tr("Parameters"));
     opcGrp3->setStyleSheet("QLabel { padding: 1px; }");
     opcGrp3->setMaximumWidth(200);
     opcGrp3->setMaximumHeight(150);
@@ -82,14 +90,14 @@ MainWindow::MainWindow(QWidget *parent) : QWidget(parent) {
     opcForm3->addRow(tr("B:"), txtvalB);
     opcForm3->addRow(tr("P:"), txtvalP);
 
-    // Agregar layouts de controles a cabecera
+    // Aggregate head layout controls
     headLayout->addWidget(opcGrp1);
     headLayout->addWidget(opcGrp3);
     headLayout->addWidget(opcGrp2);
     mainLayout->addLayout(headLayout);
 
 
-    // Inicializar controles para imagenes
+    // Initialize image controls
     imgs[4] = new QImage();
     view[4] = new GraphicsView();
     view[4]->enableDrawing(false);
@@ -110,10 +118,10 @@ MainWindow::MainWindow(QWidget *parent) : QWidget(parent) {
         scen[i] = new QGraphicsScene();
         scen[i+2] = new QGraphicsScene();
 
-        btnUndo[i] = new QPushButton("Deshacer ultimo trazo");
-        btnClearLines[i] = new QPushButton("Deshacer todos los trazos");
-        btnClear[i] = new QPushButton("Limpiar lienzo (#items = 0)");
-        btnOpen[i] = new QPushButton(tr("Cargar imagen"));
+        btnUndo[i] = new QPushButton("Undo last trace");
+        btnClearLines[i] = new QPushButton("Clear all traces");
+        btnClear[i] = new QPushButton("Clear canvas (#items = 0)");
+        btnOpen[i] = new QPushButton(tr("Select image"));
 
         connect(btnUndo[i], SIGNAL(clicked()), this, SLOT(on_btnUndo_clicked()));
         connect(btnClearLines[i],SIGNAL(clicked()), this, SLOT(on_btnClearLines_clicked()));
@@ -138,7 +146,7 @@ MainWindow::MainWindow(QWidget *parent) : QWidget(parent) {
         view[i+2]->setScene(scen[i+2]);
     }
 
-    // Para las imagenes a la derecha
+    // Holds images on the right
     imageContainer[2] = new QVBoxLayout();
     imageContainer[2]->addWidget(view[2]);
     imageContainer[2]->addWidget(view[3]);
@@ -156,16 +164,16 @@ MainWindow::MainWindow(QWidget *parent) : QWidget(parent) {
     frame[2]->setLayout(imageContainer[2]);
     frame[2]->setMaximumWidth(300);
 
-    // Layout de ventana
+    // Window layout
     mainLayout->addLayout(imgLayout);
     superLayout->addLayout(mainLayout);
     superLayout->addWidget(frame[2]);
     this->setLayout(superLayout);
 
-    // Configuracion del dialogo para cargar imágenes
+    // Configure load image dialog
     diaImage = new QFileDialog(this);
     diaImage->setFileMode(QFileDialog::ExistingFile);
-    diaImage->setNameFilter(tr("Images (*.png *.jpg *bmp)"));
+    diaImage->setNameFilter(tr("Images (*.png *.jpg *.bmp)"));
     diaImage->setViewMode(QFileDialog::Detail);
 
     diaColor = new QColorDialog(this);
@@ -186,7 +194,7 @@ void MainWindow::keyPressEvent(QKeyEvent *e) {
 }    
 
 void MainWindow::on_txtValEnter() {
-    this->ArreglameLaVida();
+    this->ProcessImages();
 }
 
 void MainWindow::on_radioLinea_toogled(bool a) {
@@ -198,25 +206,25 @@ void MainWindow::on_btnOpen_clicked() {
     LoadImage(pos);
 }
 
-// Limpia el widget contenedor de la imagen
+// Completely clear the canvas
 void MainWindow::on_btnClear_clicked() {
     bool pos = (sender() == btnClear[RIGTH]);
     CleanCanvas(pos);
 }
 
-// Limpia el widget contenedor de la imagen
+// Remove all segments
 void MainWindow::on_btnClearLines_clicked() {
     bool pos = (sender() == btnClearLines[RIGTH]);
     view[pos]->cleanLines();
 }
 
-// Deshace último trazo realizado
+// Undo most recent segment
 void MainWindow::on_btnUndo_clicked() {
     bool pos = (sender() == btnUndo[RIGTH]);
     UndoLineCanvas(pos);
 }
 
-// Cambia el color del pincel con el que se dibuja
+// Change drawing color
 void MainWindow::on_btnColor_clicked() {
     if(!diaColor->exec()) return;
     this->ChangeColorPen(diaColor->selectedColor());
@@ -230,7 +238,7 @@ void MainWindow::ChangeColorPen(QColor colorPen) {
 }
 
 void MainWindow::on_btnProcess_clicked() {
-    this->ArreglameLaVida();
+    this->ProcessImages();
 }
 
 class outRange {
@@ -246,30 +254,30 @@ public:
     }
 };
 
-// Realizar el morphing entre las imagenes, de acuerdo a los trazos
-void MainWindow::ArreglameLaVida() {
-    // Obtener parametros para el morph
+// Following the line segments, carry out the morphing.
+void MainWindow::ProcessImages() {
+    // Get morph parameters
     VARA = this->txtvalA->text().toDouble();
     VARB = this->txtvalB->text().toDouble();
     VARP = this->txtvalP->text().toDouble();
 
-    // Revisar que ambas imagenes esten cargadas
+    // Check that both images were loaded
     if(loadimg[0] && loadimg[1] == 0) {
         QMessageBox::critical(this,
             tr("Proyecto Final - ALN - Morphing - RJRJ"),
-            tr("Faltan imágenes por cargar para poder procesarlas."),
+            tr("Must load images before processing."),
             QMessageBox::Ok, QMessageBox::Ok
         );
 
         return;
     }
 
-    // Revisar que cada imagen tenga el mismo numero de lineas
+    // Check that both images have the same number of line segments
     if(GraphicsView::straightLine &&
             view[0]->listLine->size() != view[1]->listLine->size()) {
         QMessageBox::critical(this,
             tr("Proyecto Final - ALN - Morphing - RJRJ"),
-            tr("Las imagenes no tienen el mismo numero de lineas.") +
+            tr("Images must have same number of line segments.") +
                 "(" + QString::number(view[0]->listLine->size()) + " " +
                     QString::number(view[1]->listLine->size()) + " ) ",
             QMessageBox::Ok, QMessageBox::Ok
@@ -281,7 +289,7 @@ void MainWindow::ArreglameLaVida() {
 
         QMessageBox::critical(this,
             tr("Proyecto Final - ALN - Morphing - RJRJ"),
-            tr("Las imagenes no tienen el mismo numero de lineas (puntos).") +
+            tr("Images must have same number of points drawn on them.") +
                 "(" + QString::number(view[0]->listLine->size()) + " " +
                     QString::number(view[1]->listLine->size()) + " ) ",
             QMessageBox::Ok, QMessageBox::Ok
@@ -307,11 +315,11 @@ void MainWindow::ArreglameLaVida() {
 
 
     if(!GraphicsView::straightLine) {
-        // Para cuando se usan puntos en vez de lineas :)
+        // Handle points (rather than lines)
 
         QRgb black = qRgba(0, 0, 0, 100);
         for(int iii=1; iii<view[0]->totalItems; ++iii) {
-            // Para cada par de líneas
+            // for each pair of lines...
 
             vector<QPoint> all = *view[0]->listPoint[iii];
             vector<QPoint> tempV = *view[1]->listPoint[iii];
@@ -321,7 +329,7 @@ void MainWindow::ArreglameLaVida() {
                 //imgs[4]->setPixel(all[m], black);
             }
 
-            // Eliminar puntos fuera de rango
+            // erase points which are out of range
             int w = imgs[0]->width();
             int h = imgs[0]->height();
             outRange range(w, h);
@@ -333,7 +341,7 @@ void MainWindow::ArreglameLaVida() {
             maxx = minx = all[0].x();
             maxy = miny = all[0].y();
 
-            // Encontrar los máximos y mínimos para la curva
+            // find min, max values for x, y
             for(int m=0, n=all.size(); m<n; ++m) {
                 if(all[m].x() > maxx) maxx = all[m].x();
                 if(all[m].x() < minx) minx = all[m].x();
@@ -380,11 +388,11 @@ void MainWindow::ArreglameLaVida() {
                 xx = all[j].x();
                 yy = all[j].y();
 
-                // Calcular N{i} y N{i+1}
+                // Calculate N{i} & N{i+1}
                 n1 = (x2 - xx) / hh;
                 n2 = (xx - x1) / hh;
 
-                // Agregar sumatoria en k y b para cada punto evaluado
+                // Add sum in k and by for each point evaluated
                 k[i][0] += n1*n1;
                 k[i+1][0] += n2*n2;
 
@@ -408,7 +416,7 @@ void MainWindow::ArreglameLaVida() {
                 }
             }
 
-            // Resolver sistema tridiagonal
+            // Solve tridiagonal system
             for(int i=1; i<elems; i++) {
                 double m = k[i][1] / k[i-1][0];
                 k[i][0] -= m * k[i-1][1];
@@ -462,22 +470,22 @@ void MainWindow::ArreglameLaVida() {
                 y3 += y1 / 2;
                 y4 += y2 / 2;
 
-                //Si x esta mas disperso que y
+                // if x's are further apart than 'y's
                 if(fabs(x1-x2) > fabs(y1-y2)) {
-                    // Cambiar si coordenadas estan al reves
+                    // swap coordinates if backwards
                     if(x1 > x2) { swap(x1, x2); swap(y1, y2); }
 
-                    // Ir trazando linea de acuerdo a la pendiente obtenida
+                    // draw line, with the appropriate slope
                     while(x1 < x2) {
                         y1 = m*(x1 - x2) + y2;
                         imgs[4]->setPixel(x1, y1, h?red:blue);
                         x1 += 0.01;
                     }
                 } else {
-                    // Cambiar si coordenadas estan al reves
+                    // swap coordinates if backwards
                     if(y1 > y2) { swap(x1, x2); swap(y1, y2); }
 
-                    // Ir trazando linea de acuerdo a la pendiente obtenida
+                    // draw line, with the appropriate slope
                     while(y1 < y2) {
                         x1 = (y1 - y2)/m + x2;
                         imgs[4]->setPixel(x1, y1, h?red:blue);
@@ -503,22 +511,22 @@ void MainWindow::ArreglameLaVida() {
         y4 = view[0]->listAux->at(k).second.y();
 
         double m = (y4 - y3) / (x4 - x3);
-        //Si x esta mas disperso que y
+		// if x's are further apart than 'y's
         if(fabs(x4-x3) > fabs(y4-y3)) {
-            // Cambiar si coordenadas estan al reves
+			// swap coordinates if backwards
             if(x3 > x4) { swap(x3, x4); swap(y3, y4); }
 
-            // Ir trazando linea de acuerdo a la pendiente obtenida
+			// draw line, with the appropriate slope
             while(x3 < x4) {
                 y3 = m*(x3 - x4) + y4;
                 imgs[4]->setPixel(x3, y3, qRgb(0, 0, 0));
                 x3 += 0.01;
             }
         } else {
-            // Cambiar si coordenadas estan al reves
+			// swap coordinates if backwards
             if(y3 > y4) { swap(x3, x4); swap(y3, y4); }
 
-            // Ir trazando linea de acuerdo a la pendiente obtenida
+			// draw line, with the appropriate slope
             while(y3 < y4) {
                 x3 = (y3 - y4)/m + x4;
                 imgs[4]->setPixel(x3, y3, qRgb(0, 0, 0));
@@ -530,7 +538,6 @@ void MainWindow::ArreglameLaVida() {
 
     vector< pair<QPoint, double> >* posibles;
     posibles = new vector< pair<QPoint, double> >();
-
 
     for(int h=0; h<2; ++h) {
         int n = 0;
@@ -544,10 +551,10 @@ void MainWindow::ArreglameLaVida() {
                 double ww[lenght];
                 QPoint pp[lenght];
 
-                // Para cada linea
+                // for each line
                 for(int k=0; k<lenght; ++k) {
 
-                    //Obtener puntos originales de linea de referencia
+                    // get original lines from reference line
                     QPoint P = view[h]->listLine->at(k).first;
                     QPoint Q = view[h]->listLine->at(k).second;
 
@@ -556,11 +563,11 @@ void MainWindow::ArreglameLaVida() {
 
                     QVector2D pQP(QP.y(), -QP.x());
 
-                    // Calcular u, v
+                    // Calculate u, v
                     u = QVector2D::dotProduct(XP, QP) /  QP.lengthSquared();
                     v = QVector2D::dotProduct(XP, pQP) / QP.length();
 
-                    // Obtener puntos interpolados de linea de referencia
+                    // get interpolating lines from reference line
                     QPoint P2 = view[h]->listAux->at(k).first;
                     QPoint Q2 = view[h]->listAux->at(k).second;
 
@@ -670,12 +677,12 @@ void MainWindow::LoadImage(bool pos) {
 
     imgs[pos]->load(imagePath);
 
-    // Primer imagen cargada
+    // load first image
     if(wimg == 0 && himg == 0) {
         wimg = imgs[pos]->width();
         himg = imgs[pos]->height();
     } else {
-    // Segunda imagen cargada
+    // load second image
         if( (wimg != imgs[pos]->width()) ||
             (himg = imgs[pos]->height())) {
 //            QMessageBox::critical(this,
@@ -715,6 +722,6 @@ void MainWindow::UndoLineCanvas(bool pos) {
 void MainWindow::UpdateCount(int value) {
     bool i = (sender() == view[RIGTH]);
 
-    QString temp = "Limpiar lienzo (#items = " + QString::number(value) + ")";
+    QString temp = "Clear canvas (#items = " + QString::number(value) + ")";
     btnClear[i]->setText(temp);
 }
