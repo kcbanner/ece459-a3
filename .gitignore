@@ -1,8 +1,7 @@
-.svn
-nm-morph
+Makefile
 *.o
-*.bak
-moc*
-
+nm-morph
 test_harness
+moc_*
 out.jpg
+
