@@ -6,10 +6,11 @@
 
 using namespace std;
 
+#define NUM_IMAGES 5
+
 class Model {
  public:
 	Model();
-	//~Model();
 	
 	void prepStraightLine();
 	void commonPrep();
@@ -18,6 +19,6 @@ class Model {
 	int himg, wimg;
     vector<pair<QPoint, QPoint> > **listLines;
     vector<pair<QPoint, QPoint> > **listAux;
-    QImage *imgs[5];
+    QImage *imgs[NUM_IMAGES];
 };
 #endif

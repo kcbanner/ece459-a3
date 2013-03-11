@@ -1,7 +1,7 @@
 #include "model.h"
 
 Model::Model() {
-	for (unsigned int i = 0; i < sizeof(imgs); ++i) imgs[i] = new QImage();
+	for (unsigned int i = 0; i < NUM_IMAGES; ++i) imgs[i] = new QImage();
 
 	listLines = new vector<pair <QPoint, QPoint> >* [2];
 	listAux = new vector<pair <QPoint, QPoint> >* [2];

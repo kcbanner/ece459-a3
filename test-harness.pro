@@ -4,7 +4,8 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+QT       += core
+CONFIG   += console
 
 TARGET = test_harness
 #TEMPLATE = app
@@ -12,5 +13,4 @@ TARGET = test_harness
 SOURCES += test_harness.cpp \
     model.cpp
 
-HEADERS  +=  \
-    model.h
+HEADERS  +=  model.h

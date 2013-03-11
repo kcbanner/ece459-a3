@@ -4,9 +4,10 @@
 
 #include <QtGui/QApplication>
 #include "model.h"
+#include "window.h"
 
 int main(int argc, char * argv[]) {
-    QApplication a(argc, argv);
+    QCoreApplication a(argc, argv);
 
     Model m;
 
@@ -24,7 +25,6 @@ int main(int argc, char * argv[]) {
 
 	m.imgs[2] = new QImage(m.wimg, m.himg, QImage::Format_RGB32);
 	m.imgs[4] = new QImage(m.wimg, m.himg, QImage::Format_RGB32);
-	/*m.imgs[2]->fill(0);*/
 
 	QPoint pt1(0,0), pt2(2000,2000);
 	pair<QPoint, QPoint> pp(pt1, pt2);
@@ -40,4 +40,5 @@ int main(int argc, char * argv[]) {
     m.morph(0, 0.0, 1.0, 0.5);
 
 	m.imgs[2]->save("out.jpg");
+	a.exit(0);
 }
