@@ -9,6 +9,7 @@
 #include <algorithm>
 
 #include "graphicsview.h"
+#include "model.h"
 
 #define LEFT 0
 #define RIGTH 1
@@ -50,15 +51,14 @@ private:
 
     void ProcessImages();
 
-    int wimg, himg;
+	Model model;
+
     double VARA, VARP, VARB;
 
     bool loadimg[2];
 
     QFileDialog *diaImage;
     QColorDialog *diaColor;
-
-    QImage *imgs[5];
 
     QFrame *frame[3];
     QVBoxLayout *imageContainer[3];

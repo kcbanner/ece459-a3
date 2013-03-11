@@ -3,14 +3,15 @@
 
 #include <QtGui>
 #include <QGraphicsView>
+#include "model.h"
 
 using namespace std;
 
 class GraphicsView : public QGraphicsView {
     Q_OBJECT
 
-public:    
-    GraphicsView(QWidget *parent = 0);
+public:
+    GraphicsView(Model * model, QWidget *parent = 0, int idx = -1);
     ~GraphicsView();
 
     static void colorDrawing(QColor);
@@ -23,9 +24,6 @@ public:
     void cleanAll(void);
     void cleanLines(void);
     void undoLastLine(void);
-
-    vector<pair<QPoint, QPoint> > *listLine;
-    vector<pair<QPoint, QPoint> > *listAux;
 
     //vector< vector<QPoint>* > *listPoint;
     vector<QPoint>* listPoint[100];
@@ -44,6 +42,8 @@ signals:
     void totalChanged(int);
 
 private:
+	Model * model;
+
     bool drawing;
     bool able2Drawing;
     static QPen *pen;
@@ -51,6 +51,8 @@ private:
     QTimer *timer;
 
     int x1, x2, y1, y2;
+
+	int idx; /* index of this graphic in model */
 };
 
 #endif // GRAPHICSVIEW_H

@@ -8,12 +8,13 @@
 /* to generate the makefile, qmake -o Makefile nm-morph.pro */
 
 #include "window.h"
+#include "model.h"
 
 #define MAX_POINTS 5
 #define lambda 10
 
 MainWindow::MainWindow(QWidget *parent) : QWidget(parent) {
-    wimg = himg = 0;
+    model.wimg = model.himg = 0;
     VARA = VARP = 0.0f;
 
     this->setMinimumSize(600, 440);
@@ -98,19 +99,19 @@ MainWindow::MainWindow(QWidget *parent) : QWidget(parent) {
 
 
     // Initialize image controls
-    imgs[4] = new QImage();
-    view[4] = new GraphicsView();
+    model.imgs[4] = new QImage();
+    view[4] = new GraphicsView(&model);
     view[4]->enableDrawing(false);
 
     scen[4] = new QGraphicsScene();
     view[4]->setScene(scen[4]);
 
     for(int i=0; i<2; ++i) {
-        imgs[i] = new QImage();
+        model.imgs[i] = new QImage();
 
-        view[i] = new GraphicsView(this);
+        view[i] = new GraphicsView(&model, this, i);
         view[i]->enableDrawing(false);
-        view[i+2] = new GraphicsView();
+        view[i+2] = new GraphicsView(&model);
         view[i+2]->enableDrawing(false);
 
         connect(view[i], SIGNAL(totalChanged(int)), this, SLOT(UpdateCount(int)));
@@ -274,12 +275,12 @@ void MainWindow::ProcessImages() {
 
     // Check that both images have the same number of line segments
     if(GraphicsView::straightLine &&
-            view[0]->listLine->size() != view[1]->listLine->size()) {
+            model.listLines[0]->size() != model.listLines[1]->size()) {
         QMessageBox::critical(this,
             tr("Proyecto Final - ALN - Morphing - RJRJ"),
             tr("Images must have same number of line segments.") +
-                "(" + QString::number(view[0]->listLine->size()) + " " +
-                    QString::number(view[1]->listLine->size()) + " ) ",
+                "(" + QString::number(model.listLines[0]->size()) + " " +
+                    QString::number(model.listLines[1]->size()) + " ) ",
             QMessageBox::Ok, QMessageBox::Ok
         );
 
@@ -290,27 +291,26 @@ void MainWindow::ProcessImages() {
         QMessageBox::critical(this,
             tr("Proyecto Final - ALN - Morphing - RJRJ"),
             tr("Images must have same number of points drawn on them.") +
-                "(" + QString::number(view[0]->listLine->size()) + " " +
-                    QString::number(view[1]->listLine->size()) + " ) ",
+                "(" + QString::number(model.listLines[0]->size()) + " " +
+                    QString::number(model.listLines[1]->size()) + " ) ",
             QMessageBox::Ok, QMessageBox::Ok
         );
 
         return;
     }
 
-    imgs[2] = new QImage(wimg, himg, imgs[0]->format());
-    imgs[3] = new QImage(wimg, himg, imgs[0]->format());
-    imgs[4] = new QImage(wimg, himg, imgs[0]->format());
+    model.imgs[2] = new QImage(model.wimg, model.himg, model.imgs[0]->format());
+    model.imgs[3] = new QImage(model.wimg, model.himg, model.imgs[0]->format());
+    model.imgs[4] = new QImage(model.wimg, model.himg, model.imgs[0]->format());
 
     QRgb white = qRgba(255, 255, 255, 100);
-    for(int i=0; i<wimg; ++i) {
-        for(int j=0; j<himg; ++j) {
-            imgs[4]->setPixel(i, j, white);
+    for(int i=0; i<model.wimg; ++i) {
+        for(int j=0; j<model.himg; ++j) {
+            model.imgs[4]->setPixel(i, j, white);
         }
     }
 
     QRgb red = qRgb(255, 0, 0);
-    //QRgb g = qRgb(0, 255, 0);
     QRgb blue = qRgb(0, 0, 255);
 
 
@@ -326,12 +326,12 @@ void MainWindow::ProcessImages() {
             all.insert(all.end(), tempV.begin(), tempV.end());
 
             for(int m=0, n=all.size(); m<n; ++m) {
-                //imgs[4]->setPixel(all[m], black);
+                //model.imgs[4]->setPixel(all[m], black);
             }
 
             // erase points which are out of range
-            int w = imgs[0]->width();
-            int h = imgs[0]->height();
+            int w = model.imgs[0]->width();
+            int h = model.imgs[0]->height();
             outRange range(w, h);
             all.erase(remove_if(all.begin(), all.end(), range), all.end());
 
@@ -441,182 +441,20 @@ void MainWindow::ProcessImages() {
                 y3 = x[cc];         y4 = x[cc+1];
 
                 pair<QPoint, QPoint> pp = make_pair(QPoint(x3, y3), QPoint(x4, y4));
-                view[0]->listAux->push_back(pp);
-                //view[1]->listLine->push_back(pp);
+                model.listAux[0]->push_back(pp);
+                //model->listLines[1]->push_back(pp);
             }
         }
     }
 
-    int lenght = view[0]->listLine->size();
-    if(GraphicsView::straightLine) {
+	if (GraphicsView::straightLine) {
+		model.prepStraightLine();
+	}
 
-        for(int k=0; k<lenght; ++k) {
-            double x3, x4, y3, y4;
-            x3 = x4 = 0;
-            y3 = y4 = 0;
-
-            for(int h=0; h<2; ++h) {
-                double x1 = view[h]->listLine->at(k).first.x();
-                double y1 = view[h]->listLine->at(k).first.y();
-
-                double x2 = view[h]->listLine->at(k).second.x();
-                double y2 = view[h]->listLine->at(k).second.y();
-
-                double m = (y2 - y1) / (x2 - x1);
-
-                x3 += x1 / 2;
-                x4 += x2 / 2;
-
-                y3 += y1 / 2;
-                y4 += y2 / 2;
-
-                // if x's are further apart than 'y's
-                if(fabs(x1-x2) > fabs(y1-y2)) {
-                    // swap coordinates if backwards
-                    if(x1 > x2) { swap(x1, x2); swap(y1, y2); }
-
-                    // draw line, with the appropriate slope
-                    while(x1 < x2) {
-                        y1 = m*(x1 - x2) + y2;
-                        imgs[4]->setPixel(x1, y1, h?red:blue);
-                        x1 += 0.01;
-                    }
-                } else {
-                    // swap coordinates if backwards
-                    if(y1 > y2) { swap(x1, x2); swap(y1, y2); }
-
-                    // draw line, with the appropriate slope
-                    while(y1 < y2) {
-                        x1 = (y1 - y2)/m + x2;
-                        imgs[4]->setPixel(x1, y1, h?red:blue);
-                        y1 += 0.01;
-                    }
-                }
-            }           
-
-            pair<QPoint, QPoint> p = make_pair(QPoint(x3, y3), QPoint(x4, y4));
-            view[0]->listAux->push_back(p);
-            view[1]->listAux->push_back(p);
-        }
-    }
-
-
-    for(int k=0; k<view[0]->listAux->size(); ++k) {
-        double x3, x4, y3, y4;
-
-        x3 = view[0]->listAux->at(k).first.x();
-        y3 = view[0]->listAux->at(k).first.y();
-
-        x4 = view[0]->listAux->at(k).second.x();
-        y4 = view[0]->listAux->at(k).second.y();
-
-        double m = (y4 - y3) / (x4 - x3);
-		// if x's are further apart than 'y's
-        if(fabs(x4-x3) > fabs(y4-y3)) {
-			// swap coordinates if backwards
-            if(x3 > x4) { swap(x3, x4); swap(y3, y4); }
-
-			// draw line, with the appropriate slope
-            while(x3 < x4) {
-                y3 = m*(x3 - x4) + y4;
-                imgs[4]->setPixel(x3, y3, qRgb(0, 0, 0));
-                x3 += 0.01;
-            }
-        } else {
-			// swap coordinates if backwards
-            if(y3 > y4) { swap(x3, x4); swap(y3, y4); }
-
-			// draw line, with the appropriate slope
-            while(y3 < y4) {
-                x3 = (y3 - y4)/m + x4;
-                imgs[4]->setPixel(x3, y3, qRgb(0, 0, 0));
-                y3 += 0.01;
-            }
-        }
-    }
-
-
-    vector< pair<QPoint, double> >* posibles;
-    posibles = new vector< pair<QPoint, double> >();
+	model.commonPrep();
 
     for(int h=0; h<2; ++h) {
-        int n = 0;
-
-        for(int i=0; i<wimg; ++i) {
-            for(int j=0; j<himg; ++j) {
-
-                QPoint X(i, j);
-                double u, v;
-
-                double ww[lenght];
-                QPoint pp[lenght];
-
-                // for each line
-                for(int k=0; k<lenght; ++k) {
-
-                    // get original lines from reference line
-                    QPoint P = view[h]->listLine->at(k).first;
-                    QPoint Q = view[h]->listLine->at(k).second;
-
-                    QVector2D XP(X - P);
-                    QVector2D QP(Q - P);
-
-                    QVector2D pQP(QP.y(), -QP.x());
-
-                    // Calculate u, v
-                    u = QVector2D::dotProduct(XP, QP) /  QP.lengthSquared();
-                    v = QVector2D::dotProduct(XP, pQP) / QP.length();
-
-                    // get interpolating lines from reference line
-                    QPoint P2 = view[h]->listAux->at(k).first;
-                    QPoint Q2 = view[h]->listAux->at(k).second;
-
-                    QVector2D Q2P2(Q2 - P2);
-                    QVector2D pQ2P2(Q2P2.y(), -Q2P2.x());
-
-                    QVector2D X2 = QVector2D(P2) + u * Q2P2 + (v * pQ2P2) / Q2P2.length();
-
-                    QPoint p = X2.toPoint() - X;
-
-                    double dist = 0;
-                    if(u > 0 && u < 1) dist = fabs(v);
-                    else if(u <= 0) dist = sqrt(pow(X.x() - P.x(), 2.0) + pow(X.y() - P.y(), 2.0));
-                    else dist = sqrt(pow(X.x() - Q.x(), 2.0) + pow(X.y() - Q.y(), 2.0));
-
-                    double w = 0;
-                    w =  pow(QP.length(), VARP);
-                    w /= (VARA + dist);
-                    w = pow(w, VARB);
-
-                    ww[k] = w;
-                    pp[k] = p;
-                }
-
-                QPoint sum(0.0, 0.0);
-                double wsum = 0;
-                for(int k=0; k<lenght; ++k) {
-                    sum  += ww[k] * pp[k];
-                    wsum += ww[k];
-                }
-                sum /= wsum;
-
-                QPoint X2 = X + sum;
-
-                double y0, x0;
-                x0 = ceil(X2.x());
-                if(x0 < 0) x0 = 0;
-                if(x0 >= wimg) x0 = wimg-1;
-
-                y0 = ceil(X2.y());
-                if(y0 < 0) y0 = 0;
-                if(y0 >= himg) y0 = himg-1;
-
-                X2 = QPoint(x0, y0);
-
-                if(X2 == X) n++;
-                imgs[h+2]->setPixel(X, imgs[h]->pixel(X2));
-            }
-        }
+		model.morph(h, VARA, VARB, VARP);
     }
 
     //this->CrossDisolve(this->slider->value());
@@ -624,8 +462,8 @@ void MainWindow::ProcessImages() {
 
     for(int h=2; h<5; ++h) {
         scen[h]->clear();
-        scen[h]->setSceneRect(0, 0, wimg, himg);
-        scen[h]->addPixmap(QPixmap::fromImage(*imgs[h]));
+        scen[h]->setSceneRect(0, 0, model.wimg, model.himg);
+        scen[h]->addPixmap(QPixmap::fromImage(*model.imgs[h]));
 
         view[h]->fitInView(*view[h]->scene()->items().begin(), Qt::KeepAspectRatio);
     }
@@ -636,28 +474,28 @@ void MainWindow::on_slider_change(int a) {
 }
 
 void MainWindow::CrossDisolve(int a) {
-    if(imgs[2] == NULL || imgs[3] == NULL || imgs[4] == NULL) return;
+    if(model.imgs[2] == NULL || model.imgs[3] == NULL || model.imgs[4] == NULL) return;
 
     float f = a / 100.0;
     float g = 1 - f;
     QRgb c, d;
     QPoint X;
 
-    for(int i=0; i<wimg; ++i) {
-        for(int j=0; j<himg; ++j) {
+    for(int i=0; i<model.wimg; ++i) {
+        for(int j=0; j<model.himg; ++j) {
             X = QPoint(i, j);
 
-            c = imgs[2]->pixel(X);
-            d = imgs[3]->pixel(X);
+            c = model.imgs[2]->pixel(X);
+            d = model.imgs[3]->pixel(X);
 
             QRgb e = qRgb(f*qRed(c) + g*qRed(d),
                           f*qGreen(c) + g*qGreen(d),
                           f*qBlue(c) + g*qBlue(d)) ;
-            imgs[4]->setPixel(X, qRgba(qRed(e), qGreen(e), qBlue(e), 255));
+            model.imgs[4]->setPixel(X, qRgba(qRed(e), qGreen(e), qBlue(e), 255));
         }
     }
 
-    scen[4]->addPixmap(QPixmap::fromImage(*imgs[4]));
+    scen[4]->addPixmap(QPixmap::fromImage(*model.imgs[4]));
 }
 
 void MainWindow::on_btnSave_clicked() {
@@ -675,23 +513,23 @@ void MainWindow::LoadImage(bool pos) {
     QSize sizecont = view[pos]->size();
     sizecont -= QSize(5, 5);
 
-    imgs[pos]->load(imagePath);
+    model.imgs[pos]->load(imagePath);
 
     // load first image
-    if(wimg == 0 && himg == 0) {
-        wimg = imgs[pos]->width();
-        himg = imgs[pos]->height();
+    if(model.wimg == 0 && model.himg == 0) {
+        model.wimg = model.imgs[pos]->width();
+        model.himg = model.imgs[pos]->height();
     } else {
     // load second image
-        if( (wimg != imgs[pos]->width()) ||
-            (himg = imgs[pos]->height())) {
+        if( (model.wimg != model.imgs[pos]->width()) ||
+            (model.himg = model.imgs[pos]->height())) {
 //            QMessageBox::critical(this,
 //                tr("Proyecto Final - ALN - Morphing - RJRJ"),
 //                tr("La imagen cargada no coincide en dimensiones con la otra imagen"),
 //                QMessageBox::Ok, QMessageBox::Ok
 //            );
 
-//            imgs[pos] = NULL;
+//            model.imgs[pos] = NULL;
 //            return;
         }
     }
@@ -699,7 +537,7 @@ void MainWindow::LoadImage(bool pos) {
     view[pos]->reset();
     scen[pos]->clear();
     scen[pos]->setSceneRect(0, 0, sizecont.width(), sizecont.height());
-    scen[pos]->addPixmap(QPixmap::fromImage(*imgs[pos]));
+    scen[pos]->addPixmap(QPixmap::fromImage(*model.imgs[pos]));
     view[pos]->enableDrawing(true);
     view[pos]->resize(sizecont);
 
@@ -711,7 +549,7 @@ void MainWindow::CleanCanvas(bool pos) {
     loadimg[pos] = false;
 
     if(loadimg[0] && loadimg[1] == 0) {
-        wimg = himg = 0;
+        model.wimg = model.himg = 0;
     }
 }
 

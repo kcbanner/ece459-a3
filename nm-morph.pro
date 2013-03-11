@@ -11,11 +11,13 @@ TARGET = nm-morph
 
 SOURCES += main.cpp \
     window.cpp \
-    graphicsview.cpp
+    graphicsview.cpp \
+    model.cpp
 
 HEADERS  += \
     window.h \
-    graphicsview.h
+    graphicsview.h \
+    model.h
 
 
 
