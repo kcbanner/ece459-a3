@@ -4,3 +4,5 @@ nm-morph
 *.bak
 moc*
 
+test_harness
+out.jpg
