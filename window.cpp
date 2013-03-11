@@ -6,6 +6,7 @@
 /* let me know if you have better translations for me. */
 
 /* to generate the makefile, qmake -o Makefile nm-morph.pro */
+/* qmake-qt4 on ece459-1 */
 
 #include "window.h"
 #include "model.h"
