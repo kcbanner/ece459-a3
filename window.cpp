@@ -448,14 +448,14 @@ void MainWindow::ProcessImages() {
         }
     }
 
-	if (GraphicsView::straightLine) {
-		model.prepStraightLine();
-	}
+    if (GraphicsView::straightLine) {
+        model.prepStraightLine();
+    }
 
-	model.commonPrep();
+    model.commonPrep();
 
     for(int h=0; h<2; ++h) {
-		model.morph(h, VARA, VARB, VARP);
+        model.morph(h, VARA, VARB, VARP);
     }
 
     //this->CrossDisolve(this->slider->value());

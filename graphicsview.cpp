@@ -17,10 +17,10 @@ GraphicsView::GraphicsView(Model * model, QWidget *parent, int idx) : QGraphicsV
     timer->setInterval(100);
     timer->setSingleShot(true);
 
-	if (idx >= 0) {
-		model->listLines[idx] = new vector<pair<QPoint, QPoint> >();
-		model->listAux[idx] = new vector<pair<QPoint, QPoint> >();
-	}
+    if (idx >= 0) {
+        model->listLines[idx] = new vector<pair<QPoint, QPoint> >();
+        model->listAux[idx] = new vector<pair<QPoint, QPoint> >();
+    }
 }
 
 void GraphicsView::reset() {
@@ -29,10 +29,10 @@ void GraphicsView::reset() {
     drawing = false;
     totalItems = 0;
 
-	if (idx >= 0) {
-		model->listLines[idx] = new vector<pair <QPoint, QPoint> >();
-		model->listAux[idx] = new vector<pair <QPoint, QPoint> >();
-	}
+    if (idx >= 0) {
+        model->listLines[idx] = new vector<pair <QPoint, QPoint> >();
+        model->listAux[idx] = new vector<pair <QPoint, QPoint> >();
+    }
 
     listPoint[100] = new vector<QPoint>[100]();
     for(int i=0; i<100; ++i) {
@@ -88,7 +88,7 @@ void GraphicsView::mouseMoveEvent(QMouseEvent * event) {
             }
         }
 
-		model->listLines[idx]->push_back( make_pair(QPoint(x1, y1), QPoint(x2, y2) ) );
+        model->listLines[idx]->push_back( make_pair(QPoint(x1, y1), QPoint(x2, y2) ) );
     } else {
         QPoint a (x1, y1);
         QPoint b (x2, y2);
@@ -118,24 +118,24 @@ void GraphicsView::resizeImages(void) {
 }
 
 void GraphicsView::cleanAll() {
-	if (idx >= 0) {
-		if(model->listLines[idx]->size() == 0) return;
+    if (idx >= 0) {
+        if(model->listLines[idx]->size() == 0) return;
 
-		QList<QGraphicsItem *>::Iterator it = this->scene()->items().begin();
-		while(it != this->scene()->items().end()) {
-			this->scene()->removeItem(*(it));
-			it = this->scene()->items().begin();
-		}
-		
-		if(straightLine) {
-			model->listLines[idx]->clear();
-		} else {
-			for(int i=0; i<100; ++i) {
-				if(listPoint[i] != NULL)
-					listPoint[i]->clear();
-			}
-		}
-	}
+        QList<QGraphicsItem *>::Iterator it = this->scene()->items().begin();
+        while(it != this->scene()->items().end()) {
+            this->scene()->removeItem(*(it));
+            it = this->scene()->items().begin();
+        }
+        
+        if(straightLine) {
+            model->listLines[idx]->clear();
+        } else {
+            for(int i=0; i<100; ++i) {
+                if(listPoint[i] != NULL)
+                    listPoint[i]->clear();
+            }
+        }
+    }
 
     enableDrawing(false);
     totalItems = 0;
@@ -143,22 +143,22 @@ void GraphicsView::cleanAll() {
 }
 
 void GraphicsView::cleanLines() {
-	if (idx >= 0) {
-		if(model->listLines[idx]->begin() == model->listLines[idx]->end() - 1) return;
-		if(model->listLines[idx]->size() == 1) return;
+    if (idx >= 0) {
+        if(model->listLines[idx]->begin() == model->listLines[idx]->end() - 1) return;
+        if(model->listLines[idx]->size() == 1) return;
 
-		QList<QGraphicsItem *>::Iterator it = this->scene()->items().begin();
-		while(it != this->scene()->items().end() - 1) {
-			this->scene()->removeItem(*(it));
-			it = this->scene()->items().begin();
-		}
-		
-		if(straightLine) {
-			model->listLines[idx]->erase(model->listLines[idx]->begin(), model->listLines[idx]->end() - 1);
-		} else {
-			model->listLines[idx]->erase(model->listLines[idx]->begin(), model->listLines[idx]->end() - 1);
-		}
-	}
+        QList<QGraphicsItem *>::Iterator it = this->scene()->items().begin();
+        while(it != this->scene()->items().end() - 1) {
+            this->scene()->removeItem(*(it));
+            it = this->scene()->items().begin();
+        }
+        
+        if(straightLine) {
+            model->listLines[idx]->erase(model->listLines[idx]->begin(), model->listLines[idx]->end() - 1);
+        } else {
+            model->listLines[idx]->erase(model->listLines[idx]->begin(), model->listLines[idx]->end() - 1);
+        }
+    }
 
     totalItems = 1;
     emit totalChanged(totalItems);
