@@ -47,6 +47,6 @@ int main(int argc, char * argv[]) {
     m.commonPrep();
     m.morph(0, 0.0, 1.0, 0.2);
 
-    m.imgs[2]->save("out.jpg");
+    m.imgs[2]->save("out.png");
     a.exit(0);
 }
