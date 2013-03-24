@@ -2,11 +2,11 @@ There are two apps here: the original app, in main.cpp, and my test
 harness, in test-harness.cpp.  You can generate the Makefile for the
 original app using:
 
-qmake-qt -o Makefile nm-morph.pro.
+qmake-qt4 -o Makefile nm-morph.pro
 
 Similarly, you can generate the Makefile for my test harness with:
 
-qmake-qt -o Makefile test-harness.pro.
+qmake-qt4 -o Makefile test-harness.pro
 
 I've refactored code in the app from the original, which you can find
 at http://code.google.com/p/nm-morph.  It's not perfect; I know that
