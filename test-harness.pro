@@ -10,6 +10,8 @@ CONFIG   += console
 TARGET = test_harness
 #TEMPLATE = app
 
+QMAKE_CXXFLAGS += -ggdb
+
 SOURCES += test_harness.cpp \
     model.cpp
 
