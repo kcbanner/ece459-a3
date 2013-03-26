@@ -19,11 +19,13 @@ QMAKE_CXXFLAGS_RELEASE += -mtune=corei7-avx
 QMAKE_CXXFLAGS_RELEASE -= -march=x86-64
 QMAKE_CXXFLAGS_RELEASE += -march=native
 
+QMAKE_CXXFLAGS += -fopenmp
 QMAKE_CXXFLAGS += -ggdb
 QMAKE_CXXFLAGS += -mssse3
 QMAKE_CXXFLAGS += -malign-double
 
 LIBS += -lprofiler
+LIBS += -lgomp
 
 SOURCES += test_harness.cpp \
     model.cpp

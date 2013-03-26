@@ -108,6 +108,7 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
   int n = 0;
   int lines = listLines[0]->size();
 
+  #pragma omp parallel for
   for(int i=0; i<wimg; ++i) {
     for(int j=0; j<himg; ++j) {
             
@@ -120,6 +121,7 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
       vec4d pp_y;	
             
       // for each line
+      //#pragma omp parallel for
       for(int k=0; k<lines; ++k) {
                 
         // get original lines from reference line
@@ -169,10 +171,10 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
 	    
       if (lines == 4) {
         vec4d product;
-	vec4d sum;
+	       vec4d sum;
 
-	product.v = __builtin_ia32_mulpd256(ww.v, pp_x.v);
-	sum.v = __builtin_ia32_roundpd256(product.v, 0);
+	       product.v = __builtin_ia32_mulpd256(ww.v, pp_x.v);
+	       sum.v = __builtin_ia32_roundpd256(product.v, 0);
 	
 	sum_x = (int)sum.a[0] + (int)sum.a[1] + (int)sum.a[2] + (int)sum.a[3];
 	
@@ -188,7 +190,6 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
         wsum += ww.a[2];
         wsum += ww.a[3];
       } else {
-		printf("error\n");
 
         for(int k=0; k<lines; ++k) {
           sum_x  += ww.a[k] * pp_x.a[k];
@@ -214,7 +215,9 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
       X2 = QPoint(x0, y0);
 
       if(X2 == X) n++;
+      //imgs[]
       imgs[h+2]->setPixel(X, imgs[h]->pixel(X2));
+      //imgs[h+2]->setPixel(X, X2.x());
     }
   }
 }
