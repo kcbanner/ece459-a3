@@ -116,13 +116,18 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
       vec4d ww;
       vec4d pp_x;
       vec4d pp_y;	
-            
+
+      
+      
       // for each line
       for(int k=0; k<lines; ++k) {
                 
         // get original lines from reference line
-        QPoint P = listLines[h]->at(k).first;
-        QPoint Q = listLines[h]->at(k).second;
+        pair<QPoint, QPoint>* linesData = listLines[h]->data();
+        pair<QPoint, QPoint>* auxData = listAux[h]->data();
+
+        QPoint P = linesData[k].first;
+        QPoint Q = linesData[k].second;
                 
         QVector2D XP(X - P);
         QVector2D QP(Q - P);
@@ -134,8 +139,8 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
         v = QVector2D::dotProduct(XP, pQP) / QP.length();
 
         // get interpolating lines from reference line
-        QPoint P2 = listAux[h]->at(k).first;
-        QPoint Q2 = listAux[h]->at(k).second;
+        QPoint P2 = auxData[k].first;
+        QPoint Q2 = auxData[k].second;
 
         QVector2D Q2P2(Q2 - P2);
         QVector2D pQ2P2(Q2P2.y(), -Q2P2.x());
