@@ -115,7 +115,6 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
       double u, v;
             
       vec4d ww;
-      //QPoint pp[lines];
       vec4d pp_x;
       vec4d pp_y;	
             
@@ -169,19 +168,16 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
 	    
       if (lines == 4) {
         vec4d product;
-	vec4d sum;
+        vec4d sum;
 
-	product.v = __builtin_ia32_mulpd256(ww.v, pp_x.v);
-	sum.v = __builtin_ia32_roundpd256(product.v, 0);
+        product.v = __builtin_ia32_mulpd256(ww.v, pp_x.v);
+        sum.v = __builtin_ia32_roundpd256(product.v, 0);
+        sum_x = (int)sum.a[0] + (int)sum.a[1] + (int)sum.a[2] + (int)sum.a[3];
 	
-	sum_x = (int)sum.a[0] + (int)sum.a[1] + (int)sum.a[2] + (int)sum.a[3];
 	
-	
-	product.v = __builtin_ia32_mulpd256(ww.v, pp_y.v);
-	sum.v = __builtin_ia32_roundpd256(product.v, 0);	
-	 
-	sum_y = (int)sum.a[0] + (int)sum.a[1] + (int)sum.a[2] + (int)sum.a[3];
-
+        product.v = __builtin_ia32_mulpd256(ww.v, pp_y.v);
+        sum.v = __builtin_ia32_roundpd256(product.v, 0);
+        sum_y = (int)sum.a[0] + (int)sum.a[1] + (int)sum.a[2] + (int)sum.a[3];
 
         wsum += ww.a[0];
         wsum += ww.a[1];
