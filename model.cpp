@@ -109,8 +109,8 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
             
       double ww[lines];
       //QPoint pp[lines];
-      double pp_x[lines];
-      double pp_y[lines];	
+      int pp_x[lines];
+      int pp_y[lines];	
             
       // for each line
       for(int k=0; k<lines; ++k) {
@@ -154,22 +154,22 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
 		pp_y[k] = p.y();
       }
 
-      QPoint sum(0.0, 0.0);
-      double sum_x = 0.0;
-      double sum_y = 0.0;
+      //QPoint sum(0.0, 0.0);
+      int sum_x = 0;
+      int sum_y = 0;
       double wsum = 0.0;
       //printf("lines: %d\n", lines);
 	    
       if (lines == 4) {
-        sum_x += ww[0]*pp_x[0];
-        sum_x += ww[1]*pp_x[1];
-        sum_x += ww[2]*pp_x[2];
-        sum_x += ww[3]*pp_x[3];
+        sum_x = qRound(sum_x + ww[0]*pp_x[0]);
+        sum_x = qRound(sum_x + ww[1]*pp_x[1]);
+        sum_x = qRound(sum_x + ww[2]*pp_x[2]);
+        sum_x = qRound(sum_x + ww[3]*pp_x[3]);
 		 
-		sum_y += ww[0]*pp_y[0];
-        sum_y += ww[1]*pp_y[1];
-		sum_y += ww[2]*pp_y[2];
-		sum_y += ww[3]*pp_y[3];
+	sum_y = qRound(sum_y + ww[0]*pp_y[0]);
+        sum_y = qRound(sum_y + ww[1]*pp_y[1]);
+	sum_y = qRound(sum_y + ww[2]*pp_y[2]);
+	sum_y = qRound(sum_y + ww[3]*pp_y[3]);
 
 
         wsum += ww[0];
@@ -186,8 +186,8 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
         }
       }
 
-      sum_x /= wsum;
-      sum_y /= wsum;
+      sum_x = qRound(sum_x / wsum);
+      sum_y = qRound(sum_y / wsum);
 
       QPoint X2 = X + QPoint(sum_x, sum_y);
 
