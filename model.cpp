@@ -107,17 +107,14 @@ void Model::commonPrep() {
 void Model::morph(int h, double VARA, double VARB, double VARP) {
   int n = 0;
   int lines = listLines[0]->size();
+
   unsigned char** line_buffer_1; 
   unsigned char** line_buffer_2;
   line_buffer_1 = new unsigned char* [himg];
   line_buffer_2 = new unsigned char* [himg];
 
-  for(int i=0; i<himg;i++) {
-    line_buffer_1[i] = imgs[h+2]->scanLine(i);
-    line_buffer_2[i] = imgs[h]->scanLine(i);
-  }
-  //unsigned char* buffer = new unsigned char[4 * wimg * himg];
-
+  memset(line_buffer_1, 0, himg*sizeof(unsigned char*));
+  memset(line_buffer_2, 0, himg*sizeof(unsigned char*));
 
   for(int i=0; i<wimg; ++i) {
     for(int j=0; j<himg; ++j) {
@@ -222,9 +219,19 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
 
       if(X2 == X) n++;
 
-      unsigned char* destination = line_buffer_1[X.y()];
+      int y1 = X.y();
+      int y2 = X2.y();
+      if(line_buffer_1[y1] == NULL) {
+        line_buffer_1[y1] = imgs[h+2]->scanLine(y1);
+      }
+
+      if(line_buffer_2[y2] == NULL) {
+        line_buffer_2[y2] = imgs[h]->scanLine(y2);
+      }
+
+      unsigned char* destination = line_buffer_1[y1];
       destination += X.x()*4;
-      unsigned char* source = line_buffer_2[X2.y()];
+      unsigned char* source = line_buffer_2[y2];
       source += X2.x()*4;
 
       *((QRgb*)destination) = *((QRgb*)source);
