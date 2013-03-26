@@ -106,6 +106,21 @@ void Model::commonPrep() {
 
 void Model::morph(int h, double VARA, double VARB, double VARP) {
   int lines = listLines[0]->size();
+  
+  pair<QPoint, QPoint>* linesData = listLines[h]->data();
+  pair<QPoint, QPoint>* auxData = listAux[h]->data();
+
+  // Memoize QP
+  
+  QVector2D QPs[lines];
+  QVector2D pQPs[lines];
+  for(int k = 0; k < lines; ++k) {
+    QPoint P = linesData[k].first;
+    QPoint Q = linesData[k].second;
+
+    QPs[k] = QVector2D(Q - P);
+    pQPs[k] = QVector2D(QPs[k].y(), -QPs[k].x());
+  }
 
   for(int i=0; i<wimg; ++i) {
     for(int j=0; j<himg; ++j) {
@@ -118,25 +133,16 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
       vec4d pp_y;	
 
       
-      
       // for each line
       for(int k=0; k<lines; ++k) {
-                
-        // get original lines from reference line
-        pair<QPoint, QPoint>* linesData = listLines[h]->data();
-        pair<QPoint, QPoint>* auxData = listAux[h]->data();
-
         QPoint P = linesData[k].first;
         QPoint Q = linesData[k].second;
                 
         QVector2D XP(X - P);
-        QVector2D QP(Q - P);
-                
-        QVector2D pQP(QP.y(), -QP.x());
                 
         // Calculate u, v
-        u = QVector2D::dotProduct(XP, QP) /  QP.lengthSquared();
-        v = QVector2D::dotProduct(XP, pQP) / QP.length();
+        u = QVector2D::dotProduct(XP, QPs[k]) /  QPs[k].lengthSquared();
+        v = QVector2D::dotProduct(XP, pQPs[k]) / QPs[k].length();
 
         // get interpolating lines from reference line
         QPoint P2 = auxData[k].first;
@@ -153,7 +159,7 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
         else dist = sqrt(pow(X.x() - Q.x(), 2.0) + pow(X.y() - Q.y(), 2.0));
 
         double w = 0;
-        w =  pow(QP.length(), VARP);
+        w =  pow(QPs[k].length(), VARP);
         w /= (VARA + dist);
         w = pow(w, VARB);
 
