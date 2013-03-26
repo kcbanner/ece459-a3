@@ -3,8 +3,8 @@
 typedef double  v4df  __attribute__ ((vector_size (32)));  /* double[4], AVX  */
 
 union vec4d {
-	v4df v;
-	double a[4];
+  v4df v;
+  double a[4];
 };
 
 Model::Model() {
@@ -108,6 +108,40 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
   int n = 0;
   int lines = listLines[0]->size();
 
+  vector<pair<QPoint, QPoint> > listLine;
+  listLine = *listLines[h];
+
+  vector<pair<QPoint, QPoint> > listAuxi;
+  listAuxi = *listAux[h];
+
+  QPoint Ps[4] = {
+    listLine.at(0).first,
+    listLine.at(1).first,
+    listLine.at(2).first,
+    listLine.at(3).first
+  };
+
+  QPoint Qs[4] = {
+    listLine.at(0).second,
+    listLine.at(1).second,
+    listLine.at(2).second,
+    listLine.at(3).second
+  };
+
+  QPoint P2s[4] = {
+    listAuxi.at(0).first,
+    listAuxi.at(1).first,
+    listAuxi.at(2).first,
+    listAuxi.at(3).first
+  };
+
+  QPoint Q2s[4] = {
+    listAuxi.at(0).second,
+    listAuxi.at(1).second,
+    listAuxi.at(2).second,
+    listAuxi.at(3).second
+  };
+
   for(int i=0; i<wimg; ++i) {
     for(int j=0; j<himg; ++j) {
             
@@ -115,7 +149,6 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
       double u, v;
             
       vec4d ww;
-      //QPoint pp[lines];
       vec4d pp_x;
       vec4d pp_y;	
             
@@ -123,9 +156,12 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
       for(int k=0; k<lines; ++k) {
                 
         // get original lines from reference line
-        QPoint P = listLines[h]->at(k).first;
-        QPoint Q = listLines[h]->at(k).second;
-                
+
+        QPoint P = Ps[k];
+        QPoint Q = Qs[k];
+        QPoint P2 = P2s[k];
+        QPoint Q2 = Q2s[k];                
+
         QVector2D XP(X - P);
         QVector2D QP(Q - P);
                 
@@ -135,10 +171,6 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
         u = QVector2D::dotProduct(XP, QP) /  QP.lengthSquared();
         v = QVector2D::dotProduct(XP, pQP) / QP.length();
 
-        // get interpolating lines from reference line
-        QPoint P2 = listAux[h]->at(k).first;
-        QPoint Q2 = listAux[h]->at(k).second;
-
         QVector2D Q2P2(Q2 - P2);
         QVector2D pQ2P2(Q2P2.y(), -Q2P2.x());
 
@@ -147,9 +179,13 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
         QPoint p = X2.toPoint() - X;
 
         double dist = 0;
-        if(u > 0 && u < 1) dist = fabs(v);
-        else if(u <= 0) dist = sqrt(pow(X.x() - P.x(), 2.0) + pow(X.y() - P.y(), 2.0));
-        else dist = sqrt(pow(X.x() - Q.x(), 2.0) + pow(X.y() - Q.y(), 2.0));
+        if(u > 0 && u < 1) { 
+          dist = fabs(v);
+        } else if(u <= 0) { 
+          dist = sqrt(pow(X.x() - P.x(), 2.0) + pow(X.y() - P.y(), 2.0));
+        } else { 
+          dist = sqrt(pow(X.x() - Q.x(), 2.0) + pow(X.y() - Q.y(), 2.0));
+        }
 
         double w = 0;
         w =  pow(QP.length(), VARP);
@@ -161,27 +197,21 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
 		pp_y.a[k] = p.y();
       }
 
-      //QPoint sum(0.0, 0.0);
       int sum_x = 0;
       int sum_y = 0;
       double wsum = 0.0;
-      //printf("lines: %d\n", lines);
 	    
       if (lines == 4) {
         vec4d product;
-	vec4d sum;
+        vec4d sum;
 
-	product.v = __builtin_ia32_mulpd256(ww.v, pp_x.v);
-	sum.v = __builtin_ia32_roundpd256(product.v, 0);
+        product.v = __builtin_ia32_mulpd256(ww.v, pp_x.v);
+        sum.v = __builtin_ia32_roundpd256(product.v, 0);
+        sum_x = (int)sum.a[0] + (int)sum.a[1] + (int)sum.a[2] + (int)sum.a[3];
 	
-	sum_x = (int)sum.a[0] + (int)sum.a[1] + (int)sum.a[2] + (int)sum.a[3];
-	
-	
-	product.v = __builtin_ia32_mulpd256(ww.v, pp_y.v);
-	sum.v = __builtin_ia32_roundpd256(product.v, 0);	
-	 
-	sum_y = (int)sum.a[0] + (int)sum.a[1] + (int)sum.a[2] + (int)sum.a[3];
-
+        product.v = __builtin_ia32_mulpd256(ww.v, pp_y.v);
+        sum.v = __builtin_ia32_roundpd256(product.v, 0);
+        sum_y = (int)sum.a[0] + (int)sum.a[1] + (int)sum.a[2] + (int)sum.a[3];
 
         wsum += ww.a[0];
         wsum += ww.a[1];
