@@ -153,10 +153,27 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
 
             QPoint sum(0.0, 0.0);
             double wsum = 0;
-            for(int k=0; k<lines; ++k) {
-                sum  += ww[k] * pp[k];
-                wsum += ww[k];
-            }
+	    //printf("lines: %d\n", lines);
+	    
+	    if (lines == 4) {
+	    	sum += ww[0]*pp[0];
+	    	sum += ww[1]*pp[1];
+	    	sum += ww[2]*pp[2];
+            	sum += ww[3]*pp[3];
+
+	    	wsum += ww[0];
+            	wsum += ww[1];
+            	wsum += ww[2];
+            	wsum += ww[3];
+    	    } else {
+		printf("error\n");
+
+            	for(int k=0; k<lines; ++k) {
+                    sum  += ww[k] * pp[k];
+                    wsum += ww[k];
+            	}
+	    }
+
             sum /= wsum;
 
             QPoint X2 = X + sum;
