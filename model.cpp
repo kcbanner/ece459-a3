@@ -110,10 +110,13 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
   pair<QPoint, QPoint>* linesData = listLines[h]->data();
   pair<QPoint, QPoint>* auxData = listAux[h]->data();
 
-  // Memoize
-  
-  QVector2D QPs[lines];
-  QVector2D pQPs[lines];
+  // Memoize  
+
+  double QPs_x[lines];
+  double QPs_y[lines];  
+  double pQPs_x[lines];
+  double pQPs_y[lines];
+
   QVector2D Q2P2s[lines];
   QVector2D pQ2P2s[lines];
   double QPlengths[lines];
@@ -121,15 +124,24 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
   double Q2P2lengths[lines];
   double powVARP[lines];
   for(int k = 0; k < lines; ++k) {
+    QVector2D QP;
+    QVector2D pQP;
+    
     QPoint P = linesData[k].first;
     QPoint Q = linesData[k].second;
     QPoint P2 = auxData[k].first;
     QPoint Q2 = auxData[k].second;
 
-    QPs[k] = QVector2D(Q - P);
-    pQPs[k] = QVector2D(QPs[k].y(), -QPs[k].x());
-    QPlengthsSquared[k] = QPs[k].lengthSquared();
-    QPlengths[k] = QPs[k].length();
+    QP = QVector2D(Q - P);
+    pQP = QVector2D(QP.y(), -QP.x());
+    QPlengthsSquared[k] = QP.lengthSquared();
+    QPlengths[k] = QP.length();
+    
+    QPs_x[k] = QP.x();
+    QPs_y[k] = QP.y();
+    pQPs_x[k] = pQP.x();
+    pQPs_y[k] = pQP.y();
+
     powVARP[k] = pow(QPlengths[k], VARP);
     Q2P2s[k] = QVector2D(Q2 - P2);
     pQ2P2s[k] = QVector2D(Q2P2s[k].y(), -Q2P2s[k].x());
@@ -138,34 +150,38 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
 
   for(int i=0; i<wimg; ++i) {
     for(int j=0; j<himg; ++j) {
-            
       QPoint X(i, j);
-      double u, v;
             
       vec4d ww;
       vec4d pp_x;
       vec4d pp_y;
       
+      double u[lines];
+      double v[lines];
+
+      for(int k = 0; k < lines; ++k) {
+        QPoint P = linesData[k].first;
+        double XPx = X.x() - P.x();
+        double XPy = X.y() - P.y();
+
+        u[k] = (XPx * QPs_x[k] + XPy * QPs_y[k]) / QPlengthsSquared[k];
+        v[k] = (XPx * pQPs_x[k] + XPy * pQPs_y[k]) / QPlengths[k];        
+      }
+
       // for each line
       for(int k = 0; k < lines; ++k) {
         QPoint P = linesData[k].first;
         QPoint P2 = auxData[k].first;
 
-        QVector2D XP(X - P);
-                
-        // Calculate u, v
-        u = QVector2D::dotProduct(XP, QPs[k]) /  QPlengthsSquared[k];
-        v = QVector2D::dotProduct(XP, pQPs[k]) / QPlengths[k];
-
-        QVector2D X2 = QVector2D(P2) + u * Q2P2s[k] + (v * pQ2P2s[k]) / Q2P2lengths[k];
+        QVector2D X2 = QVector2D(P2) + u[k] * Q2P2s[k] + (v[k] * pQ2P2s[k]) / Q2P2lengths[k];
 
         double dist = 0;
-        if(u > 0 && u < 1) {
-          dist = fabs(v);
+        if(u[k] > 0 && u[k] < 1) {
+          dist = fabs(v[k]);
         } else {
           QPoint Q = linesData[k].second;
 
-          if(u <= 0) {
+          if(u[k] <= 0) {
             dist = sqrt(pow(X.x() - P.x(), 2.0) + pow(X.y() - P.y(), 2.0));
           } else {
             dist = sqrt(pow(X.x() - Q.x(), 2.0) + pow(X.y() - Q.y(), 2.0));
