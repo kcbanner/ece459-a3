@@ -1,10 +1,28 @@
 #include "model.h"
 
 typedef double  v4df  __attribute__ ((vector_size (32)));  /* double[4], AVX  */
+typedef double  v2df  __attribute__ ((vector_size (16)));  /* double[4], AVX  */
+typedef float  v4sf  __attribute__ ((vector_size (16)));  /* double[4], AVX  */
+typedef float  v2sf  __attribute__ ((vector_size (8)));  /* double[4], AVX  */
 
 union vec4d {
 	v4df v;
 	double a[4];
+};
+
+union vec4f {
+	v4sf v;
+	float a[4];
+};
+
+union vec2d {
+	v2df v;
+	double a[2];
+};
+
+union vec2f {
+	v2sf v;
+	float a[2];
 };
 
 Model::Model() {
@@ -131,8 +149,32 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
         QVector2D pQP(QP.y(), -QP.x());
                 
         // Calculate u, v
-        u = QVector2D::dotProduct(XP, QP) /  QP.lengthSquared();
-        v = QVector2D::dotProduct(XP, pQP) / QP.length();
+
+        vec4f muls;
+        vec4f left;
+        vec4f right;
+
+        left.a[0] = XP.x();
+        left.a[1] = XP.y();
+        left.a[2] = XP.x();
+        left.a[3] = XP.y();
+
+        right.a[0] = QP.x();
+        right.a[1] = QP.y();
+        right.a[2] = pQP.x();
+        right.a[3] = pQP.y();
+
+        muls.v = __builtin_ia32_mulps(left.v, right.v);
+
+        vec4f sqr;
+        sqr.a[0] = QP.x();
+        sqr.a[1] = QP.y();
+        sqr.v = __builtin_ia32_mulps(sqr.v, sqr.v);
+
+        double lengthSquared = sqr.a[0] + sqr.a[1];
+
+        u = (muls.a[0] + muls.a[1]) /  lengthSquared;
+        v = (muls.a[2] + muls.a[3]) / sqrt(lengthSquared);
 
         // get interpolating lines from reference line
         QPoint P2 = listAux[h]->at(k).first;
