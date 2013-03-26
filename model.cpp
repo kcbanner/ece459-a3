@@ -168,12 +168,14 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
         v[k] = (XPx * pQPs_x[k] + XPy * pQPs_y[k]) / QPlengths[k];        
       }
 
-      // for each line
+      QVector2D X2s[lines];
+      for(int k = 0; k < lines; ++k) {
+        QPoint P2 = auxData[k].first;
+        X2s[k] = QVector2D(P2) + u[k] * Q2P2s[k] + (v[k] * pQ2P2s[k]) / Q2P2lengths[k];
+      }
+
       for(int k = 0; k < lines; ++k) {
         QPoint P = linesData[k].first;
-        QPoint P2 = auxData[k].first;
-
-        QVector2D X2 = QVector2D(P2) + u[k] * Q2P2s[k] + (v[k] * pQ2P2s[k]) / Q2P2lengths[k];
 
         double dist = 0;
         if(u[k] > 0 && u[k] < 1) {
@@ -194,8 +196,8 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
         w = pow(w, VARB);
 
         ww.a[k] = w;
-        pp_x.a[k] = qRound(X2.x()) - X.x();
-        pp_y.a[k] = qRound(X2.y()) - X.y();
+        pp_x.a[k] = qRound(X2s[k].x()) - X.x();
+        pp_y.a[k] = qRound(X2s[k].y()) - X.y();
       }
 
       int sum_x = 0;
