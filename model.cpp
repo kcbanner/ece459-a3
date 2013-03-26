@@ -121,7 +121,6 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
       vec4d pp_y;	
             
       // for each line
-      //#pragma omp parallel for
       for(int k=0; k<lines; ++k) {
                 
         // get original lines from reference line
@@ -215,9 +214,7 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
       X2 = QPoint(x0, y0);
 
       if(X2 == X) n++;
-      //imgs[]
       imgs[h+2]->setPixel(X, imgs[h]->pixel(X2));
-      //imgs[h+2]->setPixel(X, X2.x());
     }
   }
 }
