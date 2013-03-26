@@ -1,5 +1,12 @@
 #include "model.h"
 
+typedef double  v4df  __attribute__ ((vector_size (32)));  /* double[4], AVX  */
+
+union vec4d {
+	v4df v;
+	double a[4];
+};
+
 Model::Model() {
   for (unsigned int i = 0; i < NUM_IMAGES; ++i) imgs[i] = new QImage();
 
@@ -107,10 +114,10 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
       QPoint X(i, j);
       double u, v;
             
-      double ww[lines];
+      vec4d ww;
       //QPoint pp[lines];
-      int pp_x[lines];
-      int pp_y[lines];	
+      vec4d pp_x;
+      vec4d pp_y;	
             
       // for each line
       for(int k=0; k<lines; ++k) {
@@ -149,9 +156,9 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
         w /= (VARA + dist);
         w = pow(w, VARB);
 
-        ww[k] = w;
-        pp_x[k] = p.x();
-		pp_y[k] = p.y();
+        ww.a[k] = w;
+        pp_x.a[k] = p.x();
+		pp_y.a[k] = p.y();
       }
 
       //QPoint sum(0.0, 0.0);
@@ -161,28 +168,32 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
       //printf("lines: %d\n", lines);
 	    
       if (lines == 4) {
-        sum_x = qRound(sum_x + ww[0]*pp_x[0]);
-        sum_x = qRound(sum_x + ww[1]*pp_x[1]);
-        sum_x = qRound(sum_x + ww[2]*pp_x[2]);
-        sum_x = qRound(sum_x + ww[3]*pp_x[3]);
-		 
-	sum_y = qRound(sum_y + ww[0]*pp_y[0]);
-        sum_y = qRound(sum_y + ww[1]*pp_y[1]);
-	sum_y = qRound(sum_y + ww[2]*pp_y[2]);
-	sum_y = qRound(sum_y + ww[3]*pp_y[3]);
+        vec4d product;
+	vec4d sum;
+
+	product.v = __builtin_ia32_mulpd256(ww.v, pp_x.v);
+	sum.v = __builtin_ia32_roundpd256(product.v, 0);
+	
+	sum_x = (int)sum.a[0] + (int)sum.a[1] + (int)sum.a[2] + (int)sum.a[3];
+	
+	
+	product.v = __builtin_ia32_mulpd256(ww.v, pp_y.v);
+	sum.v = __builtin_ia32_roundpd256(product.v, 0);	
+	 
+	sum_y = (int)sum.a[0] + (int)sum.a[1] + (int)sum.a[2] + (int)sum.a[3];
 
 
-        wsum += ww[0];
-        wsum += ww[1];
-        wsum += ww[2];
-        wsum += ww[3];
+        wsum += ww.a[0];
+        wsum += ww.a[1];
+        wsum += ww.a[2];
+        wsum += ww.a[3];
       } else {
 		printf("error\n");
 
         for(int k=0; k<lines; ++k) {
-          sum_x  += ww[k] * pp_x[k];
-          sum_y  += ww[k] * pp_y[k];			
-          wsum += ww[k];
+          sum_x  += ww.a[k] * pp_x.a[k];
+          sum_y  += ww.a[k] * pp_y.a[k];			
+          wsum += ww.a[k];
         }
       }
 
