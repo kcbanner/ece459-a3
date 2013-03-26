@@ -110,7 +110,7 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
   pair<QPoint, QPoint>* linesData = listLines[h]->data();
   pair<QPoint, QPoint>* auxData = listAux[h]->data();
 
-  // Memoize QP
+  // Memoize
   
   QVector2D QPs[lines];
   QVector2D pQPs[lines];
@@ -173,11 +173,9 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
         pp_y.a[k] = qRound(X2.y()) - X.y();
       }
 
-      //QPoint sum(0.0, 0.0);
       int sum_x = 0;
       int sum_y = 0;
       double wsum = 0.0;
-      //printf("lines: %d\n", lines);
 	    
       if (lines == 4) {
         vec4d product;
