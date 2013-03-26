@@ -107,6 +107,17 @@ void Model::commonPrep() {
 void Model::morph(int h, double VARA, double VARB, double VARP) {
   int n = 0;
   int lines = listLines[0]->size();
+  unsigned char** line_buffer_1; 
+  unsigned char** line_buffer_2;
+  line_buffer_1 = new unsigned char* [himg];
+  line_buffer_2 = new unsigned char* [himg];
+
+  for(int i=0; i<himg;i++) {
+    line_buffer_1[i] = imgs[h+2]->scanLine(i);
+    line_buffer_2[i] = imgs[h]->scanLine(i);
+  }
+  //unsigned char* buffer = new unsigned char[4 * wimg * himg];
+
 
   for(int i=0; i<wimg; ++i) {
     for(int j=0; j<himg; ++j) {
@@ -210,7 +221,15 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
       X2 = QPoint(x0, y0);
 
       if(X2 == X) n++;
-      imgs[h+2]->setPixel(X, imgs[h]->pixel(X2));
+
+      unsigned char* destination = line_buffer_1[X.y()];
+      destination += X.x()*4;
+      unsigned char* source = line_buffer_2[X2.y()];
+      source += X2.x()*4;
+
+      *((QRgb*)destination) = *((QRgb*)source);
     }
   }
+  delete[] line_buffer_1;
+  delete[] line_buffer_2;
 }
