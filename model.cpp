@@ -108,7 +108,9 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
             double u, v;
             
             double ww[lines];
-            QPoint pp[lines];
+            //QPoint pp[lines];
+	    double pp_x[lines];
+            double pp_y[lines];	
             
             // for each line
             for(int k=0; k<lines; ++k) {
@@ -148,18 +150,27 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
                 w = pow(w, VARB);
 
                 ww[k] = w;
-                pp[k] = p;
+                pp_x[k] = p.x();
+		pp_y[k] = p.y();
             }
 
             QPoint sum(0.0, 0.0);
-            double wsum = 0;
+	    double sum_x = 0.0;
+            double sum_y = 0.0;
+            double wsum = 0.0;
 	    //printf("lines: %d\n", lines);
 	    
 	    if (lines == 4) {
-	    	sum += ww[0]*pp[0];
-	    	sum += ww[1]*pp[1];
-	    	sum += ww[2]*pp[2];
-            	sum += ww[3]*pp[3];
+	    	sum_x += ww[0]*pp_x[0];
+	    	sum_x += ww[1]*pp_x[1];
+	    	sum_x += ww[2]*pp_x[2];
+            	sum_x += ww[3]*pp_x[3];
+		 
+		sum_y += ww[0]*pp_y[0];
+                sum_y += ww[1]*pp_y[1];
+		sum_y += ww[2]*pp_y[2];
+		sum_y += ww[3]*pp_y[3];
+
 
 	    	wsum += ww[0];
             	wsum += ww[1];
@@ -169,14 +180,16 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
 		printf("error\n");
 
             	for(int k=0; k<lines; ++k) {
-                    sum  += ww[k] * pp[k];
+                    sum_x  += ww[k] * pp_x[k];
+                    sum_y  += ww[k] * pp_y[k];			
                     wsum += ww[k];
             	}
 	    }
 
-            sum /= wsum;
+            sum_x /= wsum;
+	    sum_y /= wsum;
 
-            QPoint X2 = X + sum;
+            QPoint X2 = X + QPoint(sum_x, sum_y);
 
             double y0, x0;
             x0 = ceil(X2.x());
