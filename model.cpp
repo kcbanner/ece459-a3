@@ -116,6 +116,7 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
   QVector2D pQPs[lines];
   double QPlengths[lines];
   double QPlengthsSquared[lines];
+  double powVARP[lines];
   for(int k = 0; k < lines; ++k) {
     QPoint P = linesData[k].first;
     QPoint Q = linesData[k].second;
@@ -124,6 +125,7 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
     pQPs[k] = QVector2D(QPs[k].y(), -QPs[k].x());
     QPlengthsSquared[k] = QPs[k].lengthSquared();
     QPlengths[k] = QPs[k].length();
+    powVARP[k] = pow(QPlengths[k], VARP);
   }
 
   for(int i=0; i<wimg; ++i) {
@@ -137,7 +139,7 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
       vec4d pp_y;
       
       // for each line
-      for(int k=0; k<lines; ++k) {
+      for(int k = 0; k < lines; ++k) {
         QPoint P = linesData[k].first;
         QPoint Q = linesData[k].second;
                 
@@ -162,13 +164,13 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
         else dist = sqrt(pow(X.x() - Q.x(), 2.0) + pow(X.y() - Q.y(), 2.0));
 
         double w = 0;
-        w =  pow(QPlengths[k], VARP);
+        w =  powVARP[k];
         w /= (VARA + dist);
         w = pow(w, VARB);
 
         ww.a[k] = w;
         pp_x.a[k] = qRound(X2.x()) - X.x();
-		pp_y.a[k] = qRound(X2.y()) - X.y();
+        pp_y.a[k] = qRound(X2.y()) - X.y();
       }
 
       //QPoint sum(0.0, 0.0);
