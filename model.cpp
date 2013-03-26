@@ -105,66 +105,104 @@ void Model::commonPrep() {
 }
 
 void Model::morph(int h, double VARA, double VARB, double VARP) {
-  int n = 0;
   int lines = listLines[0]->size();
+  
+  pair<QPoint, QPoint>* linesData = listLines[h]->data();
+  pair<QPoint, QPoint>* auxData = listAux[h]->data();
+
+  // Memoize  
+
+  double QPs_x[lines];
+  double QPs_y[lines];  
+  double pQPs_x[lines];
+  double pQPs_y[lines];
+
+  QVector2D Q2P2s[lines];
+  QVector2D pQ2P2s[lines];
+  double QPlengths[lines];
+  double QPlengthsSquared[lines];
+  double Q2P2lengths[lines];
+  double powVARP[lines];
+  for(int k = 0; k < lines; ++k) {
+    QVector2D QP;
+    QVector2D pQP;
+    
+    QPoint P = linesData[k].first;
+    QPoint Q = linesData[k].second;
+    QPoint P2 = auxData[k].first;
+    QPoint Q2 = auxData[k].second;
+
+    QP = QVector2D(Q - P);
+    pQP = QVector2D(QP.y(), -QP.x());
+    QPlengthsSquared[k] = QP.lengthSquared();
+    QPlengths[k] = QP.length();
+    
+    QPs_x[k] = QP.x();
+    QPs_y[k] = QP.y();
+    pQPs_x[k] = pQP.x();
+    pQPs_y[k] = pQP.y();
+
+    powVARP[k] = pow(QPlengths[k], VARP);
+    Q2P2s[k] = QVector2D(Q2 - P2);
+    pQ2P2s[k] = QVector2D(Q2P2s[k].y(), -Q2P2s[k].x());
+    Q2P2lengths[k] = Q2P2s[k].length();
+  }
 
   for(int i=0; i<wimg; ++i) {
     for(int j=0; j<himg; ++j) {
-            
       QPoint X(i, j);
-      double u, v;
             
       vec4d ww;
       vec4d pp_x;
-      vec4d pp_y;	
-            
-      // for each line
-      for(int k=0; k<lines; ++k) {
-                
-        // get original lines from reference line
-        QPoint P = listLines[h]->at(k).first;
-        QPoint Q = listLines[h]->at(k).second;
-                
-        QVector2D XP(X - P);
-        QVector2D QP(Q - P);
-                
-        QVector2D pQP(QP.y(), -QP.x());
-                
-        // Calculate u, v
-        u = QVector2D::dotProduct(XP, QP) /  QP.lengthSquared();
-        v = QVector2D::dotProduct(XP, pQP) / QP.length();
+      vec4d pp_y;
+      
+      double u[lines];
+      double v[lines];
 
-        // get interpolating lines from reference line
-        QPoint P2 = listAux[h]->at(k).first;
-        QPoint Q2 = listAux[h]->at(k).second;
+      for(int k = 0; k < lines; ++k) {
+        QPoint P = linesData[k].first;
+        double XPx = X.x() - P.x();
+        double XPy = X.y() - P.y();
 
-        QVector2D Q2P2(Q2 - P2);
-        QVector2D pQ2P2(Q2P2.y(), -Q2P2.x());
+        u[k] = (XPx * QPs_x[k] + XPy * QPs_y[k]) / QPlengthsSquared[k];
+        v[k] = (XPx * pQPs_x[k] + XPy * pQPs_y[k]) / QPlengths[k];        
+      }
 
-        QVector2D X2 = QVector2D(P2) + u * Q2P2 + (v * pQ2P2) / Q2P2.length();
+      QVector2D X2s[lines];
+      for(int k = 0; k < lines; ++k) {
+        QPoint P2 = auxData[k].first;
+        X2s[k] = QVector2D(P2) + u[k] * Q2P2s[k] + (v[k] * pQ2P2s[k]) / Q2P2lengths[k];
+      }
 
-        QPoint p = X2.toPoint() - X;
+      for(int k = 0; k < lines; ++k) {
+        QPoint P = linesData[k].first;
 
         double dist = 0;
-        if(u > 0 && u < 1) dist = fabs(v);
-        else if(u <= 0) dist = sqrt(pow(X.x() - P.x(), 2.0) + pow(X.y() - P.y(), 2.0));
-        else dist = sqrt(pow(X.x() - Q.x(), 2.0) + pow(X.y() - Q.y(), 2.0));
+        if(u[k] > 0 && u[k] < 1) {
+          dist = fabs(v[k]);
+        } else {
+          QPoint Q = linesData[k].second;
 
-        double w = 0;
-        w =  pow(QP.length(), VARP);
+          if(u[k] <= 0) {
+            dist = sqrt(pow(X.x() - P.x(), 2.0) + pow(X.y() - P.y(), 2.0));
+          } else {
+            dist = sqrt(pow(X.x() - Q.x(), 2.0) + pow(X.y() - Q.y(), 2.0));
+          }
+        }
+
+        double w;
+        w =  powVARP[k];
         w /= (VARA + dist);
         w = pow(w, VARB);
 
         ww.a[k] = w;
-        pp_x.a[k] = p.x();
-		pp_y.a[k] = p.y();
+        pp_x.a[k] = qRound(X2s[k].x()) - X.x();
+        pp_y.a[k] = qRound(X2s[k].y()) - X.y();
       }
 
-      //QPoint sum(0.0, 0.0);
       int sum_x = 0;
       int sum_y = 0;
       double wsum = 0.0;
-      //printf("lines: %d\n", lines);
 	    
       if (lines == 4) {
         vec4d product;
@@ -173,7 +211,6 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
         product.v = __builtin_ia32_mulpd256(ww.v, pp_x.v);
         sum.v = __builtin_ia32_roundpd256(product.v, 0);
         sum_x = (int)sum.a[0] + (int)sum.a[1] + (int)sum.a[2] + (int)sum.a[3];
-	
 	
         product.v = __builtin_ia32_mulpd256(ww.v, pp_y.v);
         sum.v = __builtin_ia32_roundpd256(product.v, 0);
@@ -184,7 +221,7 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
         wsum += ww.a[2];
         wsum += ww.a[3];
       } else {
-		printf("error\n");
+        printf("error\n");
 
         for(int k=0; k<lines; ++k) {
           sum_x  += ww.a[k] * pp_x.a[k];
@@ -209,7 +246,6 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
 
       X2 = QPoint(x0, y0);
 
-      if(X2 == X) n++;
       imgs[h+2]->setPixel(X, imgs[h]->pixel(X2));
     }
   }
