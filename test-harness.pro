@@ -10,7 +10,20 @@ CONFIG   += console
 TARGET = test_harness
 #TEMPLATE = app
 
+QMAKE_CXXFLAGS_RELEASE -= -O2
+QMAKE_CXXFLAGS_RELEASE += -O3
+
+QMAKE_CXXFLAGS_RELEASE -= -mtune=generic
+QMAKE_CXXFLAGS_RELEASE += -mtune=corei7-avx
+
+QMAKE_CXXFLAGS_RELEASE -= -march=x86-64
+QMAKE_CXXFLAGS_RELEASE += -march=native
+
 QMAKE_CXXFLAGS += -ggdb
+QMAKE_CXXFLAGS += -mssse3
+QMAKE_CXXFLAGS += -malign-double
+
+LIBS += -lprofiler
 
 SOURCES += test_harness.cpp \
     model.cpp
