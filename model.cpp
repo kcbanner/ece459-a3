@@ -105,7 +105,6 @@ void Model::commonPrep() {
 }
 
 void Model::morph(int h, double VARA, double VARB, double VARP) {
-  int n = 0;
   int lines = listLines[0]->size();
 
   for(int i=0; i<wimg; ++i) {
@@ -141,9 +140,7 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
         QVector2D Q2P2(Q2 - P2);
         QVector2D pQ2P2(Q2P2.y(), -Q2P2.x());
 
-        QVector2D X2 = QVector2D(P2) + u * Q2P2 + (v * pQ2P2) / Q2P2.length();
-
-        QPoint p = X2.toPoint() - X;
+        QVector2D X2 = QVector2D(P2) + u * Q2P2 + (v * pQ2P2) / Q2P2.length();        
 
         double dist = 0;
         if(u > 0 && u < 1) dist = fabs(v);
@@ -156,8 +153,8 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
         w = pow(w, VARB);
 
         ww.a[k] = w;
-        pp_x.a[k] = p.x();
-		pp_y.a[k] = p.y();
+        pp_x.a[k] = qRound(X2.x()) - X.x();
+		pp_y.a[k] = qRound(X2.y()) - X.y();
       }
 
       //QPoint sum(0.0, 0.0);
@@ -209,7 +206,6 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
 
       X2 = QPoint(x0, y0);
 
-      if(X2 == X) n++;
       imgs[h+2]->setPixel(X, imgs[h]->pixel(X2));
     }
   }
