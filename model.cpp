@@ -16,6 +16,8 @@ struct MemoizedData {
   double VARB;
   double VARP;
 
+  unsigned int * __restrict__ image;
+
   pair<QPoint, QPoint>* linesData;
   pair<QPoint, QPoint>* auxData;
   QImage** imgs;
@@ -183,7 +185,6 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
     Q2P2lengths[k] = Q2P2s[k].length();
   }
 
-
   MemoizedData data;
   data.wimg = wimg;
   data.himg = himg;
@@ -206,7 +207,8 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
   data.Q2P2lengths = Q2P2lengths;
   data.powVARP = powVARP;
 
-  
+  data.image = (unsigned int*) malloc(sizeof(unsigned int) * wimg * himg);
+
   pthread_t threads[NUM_THREADS];
   ThreadData threadData[NUM_THREADS];
 
@@ -229,7 +231,7 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
     pthread_join(threads[i], NULL);
   }
   
-
+  imgs[h+2] = new QImage((uchar*)data.image, wimg, himg, QImage::Format_RGB32);
 }
 
 void* morph_thread(void* arg) {
@@ -341,8 +343,8 @@ void* morph_thread(void* arg) {
       if(y0 >= himg) y0 = himg-1;
 
       X2 = QPoint(x0, y0);
-
-      imgs[h+2]->setPixel(X, imgs[h]->pixel(X2));
+      
+      d->image[j*wimg + i] = imgs[h]->pixel(X2);
     }
   }
   return NULL;
