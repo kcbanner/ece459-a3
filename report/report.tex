@@ -412,7 +412,7 @@ Table~\ref{tbl-precalculation}.
     Run 4 & 17.249 \\
     Run 5 & 17.827 \\
     \hline
-    Average & 17.5882 \\
+    Average & 17.588 \\
   \end{tabular}
   \caption{Benchmark results for precalculation and SIMD optimizations}
   \label{tbl-precalculation}
@@ -423,13 +423,18 @@ calculations for \texttt{QP}, \texttt{pQP}, \texttt{Q2P2},
 \texttt{pQ2P2}, the lengths of \texttt{QP} and \texttt{Q2P2}, and the
 \texttt{pow} call every pixel, they are done a single time. The cost
 of these optimizations is increased memory usage, but that usage is
-far eclipsed by the memory required to store the resultant image.
+far eclipsed by the memory required to store the resultant image. This
+change doesn't affect the output because the calculations being made
+are the exact same, they are simply being performed once instead
+of $i*j$ times.
 
 The SIMD optimization was beneficial because it allowed all the
 multiplcations between \texttt{ww} and \texttt{pp} to be performed in
 two instructions. The expensive \texttt{qRound} calls that were
 happening in \texttt{QPoint::operator*=} were also optimized away into
-an AVX instruction that does rounding.
+an AVX instruction that does rounding. Again, the output is the same
+because no calculations are being changed, they have just been
+rearranged.
 
 \subsection*{Threading}
 
@@ -638,7 +643,7 @@ The benchmarks are given in the Table~\ref{tbl-pthread-bench}.
 \end{table}
 
 The average time is 9.575, which is a X time speed-up over just the previous improvement alone. This version
-is faster because we can offload the heavy lifting in the modell::morph method to all eight CPU cores.
+is faster because we can offload the heavy lifting in the \texttt{Model::morph} method to all eight CPU cores.
 
 This improvement does not change the fundamental operation of the program because it just splits the work
 into eight sub-images. These sub-images are indipendent and the resulting composite image is the same
