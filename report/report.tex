@@ -631,12 +631,11 @@ The benchmarks are given in the Table~\ref{tbl-pthread-bench}.
   \label{tbl-pthread-bench}
 \end{table}
 
-The average time is 9.575, which is a X time speed-up over just the previous improvement alone. This version
-is faster because we can offload the heavy lifting in the modell::morph method to all eight CPU cores.
+The average time is 9.575, which is a 1.83 time speed-up over just the previous improvement alone. This version
+is faster because we can offload the heavy lifting in the modell::morph method to all eight CPU cores. It is not an 8 times speed-up, as we only made paralell a section that consisted of abut 20\% of the program.
 
 This improvement does not change the fundamental operation of the program because it just splits the work
-into eight sub-images. These sub-images are indipendent and the resulting composite image is the same
-as the one produced by the original code.
+into eight sub-images. The processing done on sub-images is indipendent and the resulting composite image is the same as the one produced by the original code.
 
 
 
