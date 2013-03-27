@@ -7,6 +7,8 @@
 #include "model.h"
 #include "window.h"
 
+#include <google/profiler.h>
+
 int main(int argc, char * argv[]) {
     QCoreApplication a(argc, argv);
 
@@ -62,8 +64,11 @@ int main(int argc, char * argv[]) {
 
     m.prepStraightLine();
     m.commonPrep();
+
+    ProfilerStart("morph.profile");
     m.morph(0, 0.5, 1.25, 0.2);
     m.morph(1, 0.5, 1.25, 0.2);
+    ProfilerStop();
 
     m.imgs[2]->save("yosemite-warped.png");
     m.imgs[3]->save("montmorency-warped.png");

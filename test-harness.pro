@@ -10,6 +10,9 @@ CONFIG   += console
 TARGET = test_harness
 #TEMPLATE = app
 
+QMAKE_CXXFLAGS_RELEASE += -g
+LIBS += -lprofiler
+
 SOURCES += test_harness.cpp \
     model.cpp
 
