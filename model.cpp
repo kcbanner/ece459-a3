@@ -1,7 +1,7 @@
 #include <pthread.h>
 #include "model.h"
 
-#define NUM_THREADS 16
+#define NUM_THREADS 8
 
 typedef double  v4df  __attribute__ ((vector_size (32)));  /* double[4], AVX  */
 
@@ -16,22 +16,22 @@ struct MemoizedData {
   double VARB;
   double VARP;
 
-  pair<QPoint, QPoint>* linesData;
-  pair<QPoint, QPoint>* auxData;
+  pair<QPoint, QPoint>* __restrict__ linesData;
+  pair<QPoint, QPoint>* __restrict__ auxData;
   QImage** imgs;
   int lines;
   int himg;
   int wimg;
-  double *QPs_x;
-  double *QPs_y;
-  double *pQPs_x;
-  double *pQPs_y;
-  QVector2D *Q2P2s;
-  QVector2D *pQ2P2s;
-  double *QPlengths;
-  double *QPlengthsSquared;
-  double *Q2P2lengths;
-  double *powVARP;
+  double * __restrict__ QPs_x;
+  double * __restrict__ QPs_y;
+  double * __restrict__ pQPs_x;
+  double * __restrict__ pQPs_y;
+  QVector2D * __restrict__ Q2P2s;
+  QVector2D * __restrict__ pQ2P2s;
+  double * __restrict__ QPlengths;
+  double * __restrict__ QPlengthsSquared;
+  double * __restrict__ Q2P2lengths;
+  double * __restrict__ powVARP;
 };
 
 struct ThreadData {
@@ -205,14 +205,13 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
   data.QPlengthsSquared = QPlengthsSquared;
   data.Q2P2lengths = Q2P2lengths;
   data.powVARP = powVARP;
-
   
   pthread_t threads[NUM_THREADS];
   ThreadData threadData[NUM_THREADS];
 
-  int offset_stride = himg/NUM_THREADS;
+  int offset_stride = himg / NUM_THREADS;
   int offset = 0;
-  for(int i=0; i <NUM_THREADS; i++) {
+  for(int i = 0; i < NUM_THREADS; i++) {
     threadData[i].i = offset;
     threadData[i].iterations = offset_stride;
     threadData[i].data = &data;
@@ -228,13 +227,12 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
   for(int i=0; i <NUM_THREADS; i++) {
     pthread_join(threads[i], NULL);
   }
-  
 
 }
 
-void* morph_thread(void* arg) {
-  ThreadData* threadData = (ThreadData*) arg;
-  MemoizedData* d = threadData->data;
+void* morph_thread(void* __restrict__ arg) {
+  ThreadData* __restrict__ threadData = (ThreadData*) arg;
+  MemoizedData* __restrict__ d = threadData->data;
 
   int h = d->h;
   int lines = d->lines;
@@ -244,7 +242,7 @@ void* morph_thread(void* arg) {
   int wimg = d->wimg;
   int himg = d->himg;
 
-  for(int j=threadData->i; j< (threadData->i + threadData->iterations); ++j) {
+  for(int j = threadData->i; j <(threadData->i + threadData->iterations); ++j) {
     for(int i=0; i<wimg; ++i) {
       QPoint X(i, j);
             
@@ -255,13 +253,127 @@ void* morph_thread(void* arg) {
       double u[lines];
       double v[lines];
 
-      for(int k = 0; k < lines; ++k) {
-        QPoint P = d->linesData[k].first;
-        double XPx = X.x() - P.x();
-        double XPy = X.y() - P.y();
+      if (0) {
+        QPoint P0 = d->linesData[0].first;
+        QPoint P1 = d->linesData[1].first;
+        QPoint P2 = d->linesData[2].first;
+        QPoint P3 = d->linesData[3].first;
 
-        u[k] = (XPx * d->QPs_x[k] + XPy * d->QPs_y[k]) / d->QPlengthsSquared[k];
-        v[k] = (XPx * d->pQPs_x[k] + XPy * d->pQPs_y[k]) / d->QPlengths[k];        
+        double XPx0 = i - P0.x();
+        double XPy0 = j - P0.y();
+        double XPx1 = i - P1.x();
+        double XPy1 = j - P1.y();
+        double XPx2 = i - P2.x();
+        double XPy2 = j - P2.y();
+        double XPx3 = i - P3.x();
+        double XPy3 = j - P3.y();
+
+        vec4d mul0a;
+        vec4d mul0b;
+        mul0a.a[0] = XPx0;
+        mul0a.a[1] = XPx0;
+        mul0a.a[2] = XPy0;
+        mul0a.a[3] = XPy0;
+        mul0b.a[0] = d->QPs_x[0];
+        mul0b.a[1] = d->pQPs_x[0];
+        mul0b.a[2] = d->QPs_y[0];
+        mul0b.a[3] = d->pQPs_y[0];
+
+        vec4d mul1a;
+        vec4d mul1b;
+        mul1a.a[0] = XPx1;
+        mul1a.a[1] = XPx1;
+        mul1a.a[2] = XPy1;
+        mul1a.a[3] = XPy1;
+        mul1b.a[0] = d->QPs_x[1];
+        mul1b.a[1] = d->pQPs_x[1];
+        mul1b.a[2] = d->QPs_y[1];
+        mul1b.a[3] = d->pQPs_y[1];
+
+        vec4d mul2a;
+        vec4d mul2b;
+        mul2a.a[0] = XPx2;
+        mul2a.a[1] = XPx2;
+        mul2a.a[2] = XPy2;
+        mul2a.a[3] = XPy2;
+        mul2b.a[0] = d->QPs_x[2];
+        mul2b.a[1] = d->pQPs_x[2];
+        mul2b.a[2] = d->QPs_y[2];
+        mul2b.a[3] = d->pQPs_y[2];
+
+        vec4d mul3a;
+        vec4d mul3b;
+        mul3a.a[0] = XPx3;
+        mul3a.a[1] = XPx3;
+        mul3a.a[2] = XPy3;
+        mul3a.a[3] = XPy3;
+        mul3b.a[0] = d->QPs_x[3];
+        mul3b.a[1] = d->pQPs_x[3];
+        mul3b.a[2] = d->QPs_y[3];
+        mul3b.a[3] = d->pQPs_y[3];
+
+        mul0a.v = __builtin_ia32_mulpd256(mul0a.v, mul0b.v);
+        mul1a.v = __builtin_ia32_mulpd256(mul1a.v, mul1b.v);
+        mul2a.v = __builtin_ia32_mulpd256(mul2a.v, mul2b.v);
+        mul3a.v = __builtin_ia32_mulpd256(mul3a.v, mul3b.v);
+
+        vec4d addua;
+        vec4d addub;
+        addua.a[0] = mul0a.a[0];
+        addub.a[0] = mul0a.a[2];
+        addua.a[1] = mul1a.a[0];
+        addub.a[1] = mul1a.a[2];
+        addua.a[2] = mul2a.a[0];
+        addub.a[2] = mul2a.a[2];
+        addua.a[3] = mul3a.a[0];
+        addub.a[3] = mul3a.a[2];
+
+        vec4d addva;
+        vec4d addvb;
+        addva.a[0] = mul0a.a[1];
+        addvb.a[0] = mul0a.a[3];
+        addva.a[1] = mul1a.a[1];
+        addvb.a[1] = mul1a.a[3];
+        addva.a[2] = mul2a.a[1];
+        addvb.a[2] = mul2a.a[3];
+        addva.a[3] = mul3a.a[1];
+        addvb.a[3] = mul3a.a[3];
+
+        addua.v = __builtin_ia32_addpd256(addua.v, addub.v);
+        addva.v = __builtin_ia32_addpd256(addva.v, addvb.v);
+
+        vec4d divLengthSquared;
+        vec4d divLength;
+        divLengthSquared.a[0] = d->QPlengthsSquared[0];
+        divLengthSquared.a[1] = d->QPlengthsSquared[1];
+        divLengthSquared.a[2] = d->QPlengthsSquared[2];
+        divLengthSquared.a[3] = d->QPlengthsSquared[3];
+        divLength.a[0] = d->QPlengths[0];
+        divLength.a[1] = d->QPlengths[1];
+        divLength.a[2] = d->QPlengths[2];
+        divLength.a[3] = d->QPlengths[3];
+        
+        divLengthSquared.v = __builtin_ia32_divpd256(addua.v, divLengthSquared.v);
+        divLength.v = __builtin_ia32_divpd256(addva.v, divLength.v);
+
+        u[0] = divLengthSquared.a[0];
+        u[1] = divLengthSquared.a[1];
+        u[2] = divLengthSquared.a[2];
+        u[3] = divLengthSquared.a[3];
+        v[0] = divLength.a[0];
+        v[1] = divLength.a[1];
+        v[2] = divLength.a[2];
+        v[3] = divLength.a[3];
+
+      } else {
+        for(int k = 0; k < lines; ++k) {
+          QPoint P = d->linesData[k].first;
+          double XPx = X.x() - P.x();
+          double XPy = X.y() - P.y();
+
+          u[k] = (XPx * d->QPs_x[k] + XPy * d->QPs_y[k]) / d->QPlengthsSquared[k];
+          v[k] = (XPx * d->pQPs_x[k] + XPy * d->pQPs_y[k]) / d->QPlengths[k];        
+        }
       }
 
       QVector2D X2s[lines];
