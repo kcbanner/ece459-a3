@@ -10,7 +10,14 @@
 \author{Casey Banner and Stephan van den Heuvel}
 \date{March 25, 2013}
 
-\lstset{frame=single}
+\lstset{
+  frame=single,
+  basicstyle=\ttfamily\footnotesize,
+  framesep=10pt,
+  aboveskip=10pt,
+  belowskip=10pt
+}
+
 
 \begin{document}
 
@@ -21,13 +28,104 @@
 % - Talk about 25s avg execution time
 % - Talk about Google Profiler, and how it is instrumented
 
+The execution time of the provided assignment code over an average of
+5 runs was $26.031$s. In order to understand where time was being spent
+within the model the gperftools CPU profiler was used. For profiling
+purposes, the test harness was instrumented as follows:
+
+\begin{lstlisting}[language=C]
+ProfilerStart("morph.profile");
+m.morph(0, 0.5, 1.25, 0.2);
+m.morph(1, 0.5, 1.25, 0.2);
+ProfilerStop();
+\end{lstlisting}
+
+The resultant profile was then analyzed with the \texttt{pprof}
+utility in order to get a line-by-line breakdown of how the execution
+time was distributed. An excerpt of the output follows:
+
+\begin{lstlisting}
+     1      1  110:  double ww[lines];
+    29     29  111:  QPoint pp[lines];
+     .      .  112:
+     .      .  113:  // for each line
+     8      8  114:  for(int k=0; k<lines; ++k) {
+     .      .  115:
+     .      .  116:      // get original lines from reference line
+    47     47  117:      QPoint P = listLines[h]->at(k).first;
+     .      .  118:      QPoint Q = listLines[h]->at(k).second;
+     .      .  119:
+    35     35  120:      QVector2D XP(X - P);
+    37     37  121:      QVector2D QP(Q - P);
+     .      .  122:
+    40     40  123:      QVector2D pQP(QP.y(), -QP.x());
+     .      .  124:
+     .      .  125:      // Calculate u, v
+   414    414  126:      u = QVector2D::dotProduct(XP, QP) /  QP.lengthSquared();
+     .      .  127:      v = QVector2D::dotProduct(XP, pQP) / QP.length();
+     .      .  128:
+     .      .  129:      // get interpolating lines from reference line
+     7      7  130:      QPoint P2 = listAux[h]->at(k).first;
+     .      .  131:      QPoint Q2 = listAux[h]->at(k).second;
+     .      .  132:
+    23     23  133:      QVector2D Q2P2(Q2 - P2);
+    24     24  134:      QVector2D pQ2P2(Q2P2.y(), -Q2P2.x());
+     .      .  135:
+   438    438  136:      QVector2D X2 = QVector2D(P2) + u*Q2P2 + (v*pQ2P2)
+                                        / Q2P2.length();
+     .      .  137:
+   126    126  138:      QPoint p = X2.toPoint() - X;
+     .      .  139:
+
+                         ...
+
+     .      .  145:      double w = 0;
+     1      1  146:      w =  pow(QP.length(), VARP);
+     8      8  147:      w /= (VARA + dist);
+    21     21  148:      w = pow(w, VARB);
+     .      .  149:
+     8      8  150:      ww[k] = w;
+    11     11  151:      pp[k] = p;
+     .      .  152:  }
+     .      .  153:
+     .      .  154:  QPoint sum(0.0, 0.0);
+     .      .  155:  double wsum = 0;
+    45     45  156:  for(int k=0; k<lines; ++k) {
+   261    261  157:      sum  += ww[k] * pp[k];
+     .      .  158:      wsum += ww[k];
+     .      .  159:  }
+   108    108  160:  sum /= wsum;
+\end{lstlisting}
+
+From this analysis we can see that the areas where the most time is spent are:
+
 % - length() is slow
-% - pow is slow
 % - big calculations are slow (u, v)
+% - the final summation loop is slow
+
+\begin{itemize}
+  \item The \texttt{u} and \texttt{v} calcuations
+  \item The \texttt{X2} calculation
+  \item The weighted sum calcuation
+  \item The calculation of \texttt{w} and \texttt{p}
+\end{itemize}
+
+The \texttt{w} calculation involves expensive calls to \texttt{pow}
+with fractional exponents, and we can see the effects of this in the
+\texttt{pprof --text} output:
+
+\begin{lstlisting}
+  2365  37.0%  37.0%     2365  37.0% __log10_finite
+  1784  27.9%  64.8%     1784  27.9% Model::morph
+  1381  21.6%  86.4%     1381  21.6% __exp_finite
+   230   3.6%  90.0%      230   3.6% 00007f19fa8f8b7f
+   120   1.9%  91.9%      120   1.9% pow
+    61   1.0%  92.9%       61   1.0% 00007f19fa34ecec
+\end{lstlisting}
 
 \section*{Improvements}
 
-\subsection*{Memoization}
+\subsection*{Memoization and SIMD}
 
 \subsection*{Threading}
 
