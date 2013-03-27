@@ -129,4 +129,217 @@ with fractional exponents, and we can see the effects of this in the
 
 \subsection*{Threading}
 
+The second major improvement done was to make the code multithreaded. We accomplished this using pthreads, as shown in the diff given by Listing~\ref{lst:Pthreads}.
+
+\begin{lstlisting}[caption={Pthreads},label={lst:Pthreads}]
+diff --git a/model.cpp b/model.cpp
+index 23fdea9..26e59e5 100644
+--- a/model.cpp
++++ b/model.cpp
+@@ -1,5 +1,8 @@
++#include <pthread.h>
+ #include "model.h"
+ 
++#define NUM_THREADS 16
++
+
+ 
++struct MemoizedData {
++  int h;
++  double VARA;
++  double VARB;
++  double VARP;
++
++  pair<QPoint, QPoint>* linesData;
++  pair<QPoint, QPoint>* auxData;
++  QImage** imgs;
++  int lines;
++  int himg;
++  int wimg;
++  double *QPs_x;
++  double *QPs_y;
++  double *pQPs_x;
++  double *pQPs_y;
++  QVector2D *Q2P2s;
++  QVector2D *pQ2P2s;
++  double *QPlengths;
++  double *QPlengthsSquared;
++  double *Q2P2lengths;
++  double *powVARP;
++};
++
++struct ThreadData {
++  int i;
++  int iterations;
++  
++  MemoizedData* data;
++};
++
++void* morph_thread(void* arg);
++
+ Model::Model() {
+   for (unsigned int i = 0; i < NUM_IMAGES; ++i) imgs[i] = new QImage();
+ 
+@@ -116,7 +152,6 @@ void Model::morph(int h, double VARA, double VARB, 
+                                      double VARP) {
+   double QPs_y[lines];  
+   double pQPs_x[lines];
+   double pQPs_y[lines];
+-
+   QVector2D Q2P2s[lines];
+   QVector2D pQ2P2s[lines];
+   double QPlengths[lines];
+@@ -148,8 +183,69 @@ void Model::morph(int h, double VARA, double VARB, 
+                                       double VARP) {
+     Q2P2lengths[k] = Q2P2s[k].length();
+   }
+ 
+-  for(int i=0; i<wimg; ++i) {
+-    for(int j=0; j<himg; ++j) {
++
++  MemoizedData data;
++  data.wimg = wimg;
++  data.himg = himg;
++  data.imgs = imgs;
++  data.linesData = linesData;
++  data.auxData = auxData;
++  data.h = h;
++  data.lines = lines;
++  data.VARA = VARA;
++  data.VARB = VARB;
++  data.VARP = VARP;
++  data.QPs_x = QPs_x;
++  data.QPs_y = QPs_y;
++  data.pQPs_x = pQPs_x;
++  data.pQPs_y = pQPs_y;
++  data.Q2P2s = Q2P2s ;
++  data.pQ2P2s = pQ2P2s;
++  data.QPlengths = QPlengths;
++  data.QPlengthsSquared = QPlengthsSquared;
++  data.Q2P2lengths = Q2P2lengths;
++  data.powVARP = powVARP;
++
++  
++  pthread_t threads[NUM_THREADS];
++  ThreadData threadData[NUM_THREADS];
++
++  int offset_stride = himg/NUM_THREADS;
++  int offset = 0;
++  for(int i=0; i <NUM_THREADS; i++) {
++    threadData[i].i = offset;
++    threadData[i].iterations = offset_stride;
++    threadData[i].data = &data;
++    offset += offset_stride;
++
++    if(i == NUM_THREADS -1) {
++      threadData[i].iterations += himg % NUM_THREADS;
++    }
++    
++    pthread_create(&threads[i], NULL,  morph_thread, &threadData[i]);
++  }
++
++  for(int i=0; i <NUM_THREADS; i++) {
++    pthread_join(threads[i], NULL);
++  }
++  
++
++}
++
++void* morph_thread(void* arg) {
++  ThreadData* threadData = (ThreadData*) arg;
++  MemoizedData* d = threadData->data;
++
++  int h = d->h;
++  int lines = d->lines;
++  double VARA = d->VARA;
++  double VARB = d->VARB;
++  QImage** imgs = d->imgs;
++  int wimg = d->wimg;
++  int himg = d->himg;
++
++  for(int j=threadData->i; j< (threadData->i + threadData->iterations); ++j) {
++    for(int i=0; i<wimg; ++i) {
+       QPoint X(i, j);
+             
+       vec4d ww;
+@@ -160,28 +256,28 @@ void Model::morph(int h, double VARA, double VARB, 
+                                        double VARP) {
+       double v[lines];
+ 
+       for(int k = 0; k < lines; ++k) {
+-        QPoint P = linesData[k].first;
++        QPoint P = d->linesData[k].first;
+         double XPx = X.x() - P.x();
+         double XPy = X.y() - P.y();
+ 
+-        u[k] = (XPx * QPs_x[k] + XPy * QPs_y[k]) / QPlengthsSquared[k];
+-        v[k] = (XPx * pQPs_x[k] + XPy * pQPs_y[k]) / QPlengths[k];        
++        u[k] = (XPx * d->QPs_x[k] + XPy * d->QPs_y[k]) / d->QPlengthsSquared[k];
++        v[k] = (XPx * d->pQPs_x[k] + XPy * d->pQPs_y[k]) / d->QPlengths[k];        
+       }
+ 
+       QVector2D X2s[lines];
+       for(int k = 0; k < lines; ++k) {
+-        QPoint P2 = auxData[k].first;
+-        X2s[k] = QVector2D(P2) + u[k] * Q2P2s[k] + (v[k] * pQ2P2s[k]) / 
+-        Q2P2lengths[k];
++        QPoint P2 = d->auxData[k].first;
++        X2s[k] = QVector2D(P2) + u[k] * d->Q2P2s[k] + (v[k] * d->pQ2P2s[k]) 
++       / d->Q2P2lengths[k];
+       }
+ 
+       for(int k = 0; k < lines; ++k) {
+-        QPoint P = linesData[k].first;
++        QPoint P = d->linesData[k].first;
+ 
+         double dist = 0;
+         if(u[k] > 0 && u[k] < 1) {
+           dist = fabs(v[k]);
+         } else {
+-          QPoint Q = linesData[k].second;
++          QPoint Q = d->linesData[k].second;
+ 
+           if(u[k] <= 0) {
+             dist = sqrt(pow(X.x() - P.x(), 2.0) + pow(X.y() - P.y(), 2.0));
+@@ -191,7 +287,7 @@ void Model::morph(int h, double VARA, double VARB, 
+                                      double VARP) {
+         }
+ 
+         double w;
+-        w =  powVARP[k];
++        w =  d->powVARP[k];
+         w /= (VARA + dist);
+         w = pow(w, VARB);
+ 
+
+\end{lstlisting}
+
+The benchmarks are given in the Table~\ref{tbl-pthread-bench}.
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{lr}
+    & {\bf Time (s)} \\
+    \hline
+    Run 1 & 9.600 \\
+    Run 2 & 9.852 \\
+    Run 3 & 9.320 \\
+    Run 4 & 9.578 \\
+    Run 5 & 9.526 \\
+    \hline
+    Average & 9.575 \\
+  \end{tabular}
+  \caption{Benchmark results for pthread optimization}
+  \label{tbl-pthread-bench}
+\end{table}
+
+The average time is 9.575, which is a X time speed-up over just the previous improvement alone. This version
+is faster because we can offload the heavy lifting in the modell::morph method to all eight CPU cores.
+
+This improvement does not change the fundamental operation of the program because it just splits the work
+into eight sub-images. These sub-images are indipendent and the resulting composite image is the same
+as the one produced by the original code.
+
+
+
 \end{document}
