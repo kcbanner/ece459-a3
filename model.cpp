@@ -1,4 +1,7 @@
+#include <pthread.h>
 #include "model.h"
+
+#define NUM_THREADS 8
 
 typedef double  v4df  __attribute__ ((vector_size (32)));  /* double[4], AVX  */
 
@@ -6,6 +9,8 @@ union vec4d {
 	v4df v;
 	double a[4];
 };
+
+void* morph_thread(void* arg);
 
 Model::Model() {
   for (unsigned int i = 0; i < NUM_IMAGES; ++i) imgs[i] = new QImage();
@@ -148,6 +153,16 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
     Q2P2lengths[k] = Q2P2s[k].length();
   }
 
+  pthread_t threads[NUM_THREADS];
+  int offset = wimg/NUM_THREADS;
+  for(int i=0; i <NUM_THREADS; i++) {
+    pthread_create(&threads[i], NULL,  morph_thread, NULL);
+  }
+
+  for(int i=0; i <NUM_THREADS; i++) {
+    pthread_join(threads[i], NULL);
+  }
+/*
   for(int i=0; i<wimg; ++i) {
     for(int j=0; j<himg; ++j) {
       QPoint X(i, j);
@@ -248,5 +263,9 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
 
       imgs[h+2]->setPixel(X, imgs[h]->pixel(X2));
     }
-  }
+  }*/
+}
+
+void* morph_thread(void* arg) {
+  return NULL;
 }

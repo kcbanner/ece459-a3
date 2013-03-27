@@ -22,6 +22,7 @@ QMAKE_CXXFLAGS_RELEASE += -march=native
 QMAKE_CXXFLAGS_RELEASE += -ffast-math
 #QMAKE_CXXFLAGS_RELEASE += -ftree-vectorizer-verbose=5
 
+QMAKE_CXXFLAGS += -pthread
 QMAKE_CXXFLAGS += -ggdb
 QMAKE_CXXFLAGS += -mssse3
 QMAKE_CXXFLAGS += -malign-double
