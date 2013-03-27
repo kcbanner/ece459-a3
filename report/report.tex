@@ -140,7 +140,7 @@ loop was created using GCC's SIMD intrinsics for the special case of
 
 The code diff is as follows:
 
-\begin{lstlisting}
+\begin{lstlisting}[caption={Precalculation and SIMD code diff}]
 diff --git a/model.cpp b/model.cpp
 index 614f25b..23fdea9 100644
 --- a/model.cpp
@@ -424,6 +424,12 @@ calculations for \texttt{QP}, \texttt{pQP}, \texttt{Q2P2},
 \texttt{pow} call every pixel, they are done a single time. The cost
 of these optimizations is increased memory usage, but that usage is
 far eclipsed by the memory required to store the resultant image.
+
+The SIMD optimization was beneficial because it allowed all the
+multiplcations between \texttt{ww} and \texttt{pp} to be performed in
+two instructions. The expensive \texttt{qRound} calls that were
+happening in \texttt{QPoint::operator*=} were also optimized away into
+an AVX instruction that does rounding.
 
 \subsection*{Threading}
 
