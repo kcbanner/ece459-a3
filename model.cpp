@@ -7,6 +7,31 @@ union vec4d {
 	double a[4];
 };
 
+struct MemoizedData {
+  int h;
+  double VARA;
+  double VARB;
+  double VARP;
+
+  int lines;
+  double *QPs_x;
+  double *QPs_y;
+  double *pQPs_x;
+  double *pQPs_y;
+  QVector2D *Q2P2s;
+  QVector2D *pQ2P2s;
+  double *QPlengths;
+  double *QPlengthsSquared;
+  double *Q2P2lengths;
+  double *powVARP;
+};
+
+struct ThreadData {
+  int i;
+  int iterations;
+  MemoizedData* data;
+};
+
 Model::Model() {
   for (unsigned int i = 0; i < NUM_IMAGES; ++i) imgs[i] = new QImage();
 
@@ -116,7 +141,6 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
   double QPs_y[lines];  
   double pQPs_x[lines];
   double pQPs_y[lines];
-
   QVector2D Q2P2s[lines];
   QVector2D pQ2P2s[lines];
   double QPlengths[lines];
@@ -147,6 +171,18 @@ void Model::morph(int h, double VARA, double VARB, double VARP) {
     pQ2P2s[k] = QVector2D(Q2P2s[k].y(), -Q2P2s[k].x());
     Q2P2lengths[k] = Q2P2s[k].length();
   }
+
+  MemoizedData data;
+  data.QPs_x = QPs_x;
+  data.QPs_y = QPs_y;
+  data.pQPs_x = pQPs_x;
+  data.pQPs_y = pQPs_y;
+  data.Q2P2s = Q2P2s ;
+  data.pQ2P2s = pQ2P2s;
+  data.QPlengths = QPlengths;
+  data.QPlengthsSquared = QPlengthsSquared;
+  data.Q2P2lengths = Q2P2lengths;
+  data.powVARP = powVARP;
 
   for(int i=0; i<wimg; ++i) {
     for(int j=0; j<himg; ++j) {
