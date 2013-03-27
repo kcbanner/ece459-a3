@@ -25,7 +25,7 @@ QMAKE_CXXFLAGS_RELEASE += -fprofile-use
 QMAKE_LFLAGS += -fprofile-use
 
 QMAKE_CXXFLAGS_RELEASE += -ffast-math
-QMAKE_CXXFLAGS_RELEASE += -ftree-vectorizer-verbose=7
+#QMAKE_CXXFLAGS_RELEASE += -ftree-vectorizer-verbose=7
 #QMAKE_CXXFLAGS_RELEASE += --param vect-max-version-for-alias-checks=20
 #QMAKE_CXXFLAGS_RELEASE += --param max-inline-insns-auto=200
 
