@@ -28,6 +28,8 @@
 % - Talk about 25s avg execution time
 % - Talk about Google Profiler, and how it is instrumented
 
+% 25.641 + 25.348 + 26.820 + 26.817 + 25.530
+
 The execution time of the provided assignment code over an average of
 5 runs was $26.031$s. In order to understand where time was being spent
 within the model the gperftools CPU profiler was used. For profiling
@@ -391,8 +393,37 @@ index 614f25b..23fdea9 100644
  } 
 \end{lstlisting}
 
+This code was run five times again to measure the improved execution
+time. The average runtime after these improvements were made was
+$17.5882$s. The results of the benchmark can be seen in
+Table~\ref{tbl-precalculation}.
+
 % >>> (17.783 + 17.635 + 17.447 + 17.249 + 17.827) / 5
 % 17.5882
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{lr}
+    & {\bf Time (s)} \\
+    \hline
+    Run 1 & 17.783 \\
+    Run 2 & 17.635 \\
+    Run 3 & 17.447 \\
+    Run 4 & 17.249 \\
+    Run 5 & 17.827 \\
+    \hline
+    Average & 17.5882 \\
+  \end{tabular}
+  \caption{Benchmark results for precalculation and SIMD optimizations}
+  \label{tbl-precalculation}
+\end{table}
+
+This optimization improved runtime because instead of doing the
+calculations for \texttt{QP}, \texttt{pQP}, \texttt{Q2P2},
+\texttt{pQ2P2}, the lengths of \texttt{QP} and \texttt{Q2P2}, and the
+\texttt{pow} call every pixel, they are done a single time. The cost
+of these optimizations is increased memory usage, but that usage is
+far eclipsed by the memory required to store the resultant image.
 
 \subsection*{Threading}
 
