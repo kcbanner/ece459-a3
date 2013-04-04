@@ -1,4 +1,4 @@
-CFLAGS?=-Wall -O2 -lm
+CFLAGS?=-Wall -O2 -lm -lOpenCL
 
 default: all
 
