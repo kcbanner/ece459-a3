@@ -18,8 +18,7 @@
 #define SPACE 1000.0f;
 
 #define POSITION_BUFFER 0
-#define ACCELLERATION_IN_BUFFER 1
-#define ACCELLERATION_OUT_BUFFER 2
+#define ACCELLERATION_BUFFER 1
 
 
 cl_float4 * initializePositions() {
@@ -39,15 +38,6 @@ cl_float4 * initializePositions() {
     return pts;
 }
 
-cl_float4 * initializeAccelerations() {
-    cl_float4 * pts = (cl_float4*) malloc(sizeof(cl_float4)*POINTS);
-    int i;
-
-    for (i = 0; i < POINTS; i++) {
-	pts[i].x = pts[i].y = pts[i].z = pts[i].w = 0;
-    }
-    return pts;
-}
 
 std::string* loadKernelSource() {
   std::ifstream file("src/bruteforce-kernel.cl"); 
@@ -57,7 +47,7 @@ std::string* loadKernelSource() {
   return contents;
 }
 
-void runKernel(std::string sourceCode, cl_float4* x, cl_float4* a)
+void runKernel(std::string sourceCode, cl_float4* x)
 {
     
         // Get available platforms
@@ -93,19 +83,16 @@ void runKernel(std::string sourceCode, cl_float4* x, cl_float4* a)
         // Create memory buffers
 
         cl::Buffer position_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, POINTS * sizeof(cl_float4));
-        cl::Buffer accelleration_in_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, POINTS * sizeof(cl_float4));
-        cl::Buffer accelleration_out_buffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, POINTS * sizeof(cl_float4));
+        cl::Buffer accelleration_buffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, POINTS * sizeof(cl_float4));
 
         // Copy lists the memory buffers
         queue.enqueueWriteBuffer(position_buffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), x);
-        queue.enqueueWriteBuffer(accelleration_in_buffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), a);
         
         // Set arguments to kernel
         //int buffer_size = POINTS;
         //kernel.setArg(BUFFER_SIZE, buffer_size);
         kernel.setArg(POSITION_BUFFER, position_buffer);
-        kernel.setArg(ACCELLERATION_IN_BUFFER, accelleration_in_buffer);
-        kernel.setArg(ACCELLERATION_OUT_BUFFER, accelleration_out_buffer);
+        kernel.setArg(ACCELLERATION_BUFFER, accelleration_buffer);
 
         // Run the kernel on specific ND range
         cl::NDRange global(POINTS);
@@ -114,13 +101,14 @@ void runKernel(std::string sourceCode, cl_float4* x, cl_float4* a)
 
         // Read buffer C into a local list
         cl_float4* new_a = new cl_float4[POINTS];
-        queue.enqueueReadBuffer(accelleration_out_buffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), new_a);
+        queue.enqueueReadBuffer(accelleration_buffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), new_a);
 
         for(int i = 0; i < POINTS; i ++) {
             printf("(%2.2f,%2.2f,%2.2f,%2.2f) (%2.3f,%2.3f,%2.3f)\n", 
                x[i].x, x[i].y, x[i].z, x[i].w,
                new_a[i].x, new_a[i].y, new_a[i].z);
         }
+        delete[] new_a;
 
     } catch(cl::Error error) {
         std::cout << error.what() << "(" << error.err() << ")" << std::endl;
@@ -142,12 +130,10 @@ void runKernel(std::string sourceCode, cl_float4* x, cl_float4* a)
 int main(int argc, char ** argv)
 {
     cl_float4 * x = initializePositions();
-    cl_float4 * a = initializeAccelerations();
 
     std::string* source = loadKernelSource();
-    runKernel(*source, x, a);
+    runKernel(*source, x);
 
     free(x);
-    free(a);
     return 0;
 }
