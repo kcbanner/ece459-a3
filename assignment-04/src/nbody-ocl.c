@@ -95,10 +95,10 @@ int main(int argc, char ** argv)
 int getOpenClContext(const char* source)
 {
     cl_platform_id platform_id;
-    glGetPlatformIDs(1, &platform_id, NULL);
+    clGetPlatformIDs(1, &platform_id, NULL);
 
     cl_device_id device;
-    clGetDeviceIDs(platform_id, GL_DEVICE_TYPE_GPU, 1, &device, NULL);
+    clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_GPU, 1, &device, NULL);
 
     cl_context context = clCreateContext(NULL, 1, &device, NULL, NULL, NULL);
     cl_program program = clCreateProgramWithSource(context, 1, &source, NULL, NULL);
