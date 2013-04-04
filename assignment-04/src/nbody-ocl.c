@@ -13,6 +13,8 @@
 #define POINTS 500 * 64
 #define SPACE 1000.0f;
 
+int getOpenClContext(const char* source);
+
 void bodyBodyInteraction(cl_float4 bi, cl_float4 bj, cl_float4 *ai) {
     cl_float4 r;
     
@@ -88,4 +90,17 @@ int main(int argc, char ** argv)
     free(x);
     free(a);
     return 0;
+}
+
+int getOpenClContext(const char* source)
+{
+    cl_platform_id platform_id;
+    glGetPlatformIDs(1, &platform_id, NULL);
+
+    cl_device_id device;
+    clGetDeviceIDs(platform_id, GL_DEVICE_TYPE_GPU, 1, &device, NULL);
+
+    cl_context context = clCreateContext(NULL, 1, &device, NULL, NULL, NULL);
+    cl_program program = clCreateProgramWithSource(context, 1, &source, NULL, NULL);
+
 }
