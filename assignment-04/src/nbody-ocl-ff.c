@@ -146,12 +146,11 @@ void computeBins(cl::Context context, cl::CommandQueue queue, std::vector<cl::De
 
         // Read buffer C into a local list
         cl_float4* bins = new cl_float4[BINS];
-        queue.enqueueReadBuffer(bins_buffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), bins);
+        queue.enqueueReadBuffer(bins_buffer, CL_TRUE, 0, BINS * sizeof(cl_float4), bins);
 
-        for(int i = 0; i < POINTS; i ++) {
-            printf("(%2.2f,%2.2f,%2.2f,%2.2f) (%2.3f,%2.3f,%2.3f)\n", 
-               x[i].x, x[i].y, x[i].z, x[i].w,
-               bins[i].x, bins[i].y, bins[i].z);
+        for(int i = 0; i < BINS; i ++) {
+            printf("(%2.2f,%2.2f,%2.2f,%2.2f)\n", 
+               bins[i].x, bins[i].y, bins[i].z, bins[i].w);
         }
         delete[] bins;
 
