@@ -3,7 +3,7 @@ CFLAGS?=-Wall -O2 -lm
 default: all
 
 # modify to generate parallel and optimized versions!
-all: bin bin/nbody-seq
+all: bin bin/nbody-seq bin/nbody-ocl
 
 report: report.pdf
 
