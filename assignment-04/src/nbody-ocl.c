@@ -28,12 +28,12 @@ cl_float4 * initializePositions() {
     srand(42L); // for deterministic results
 
     for (i = 0; i < POINTS; i++) {
-	// quick and dirty generation of points
-	// not random at all, but I don't care.
-	pts[i].x = ((float)rand())/RAND_MAX * SPACE;
-	pts[i].y = ((float)rand())/RAND_MAX * SPACE;
-	pts[i].z = ((float)rand())/RAND_MAX * SPACE;
-	pts[i].w = 1.0f; // size = 1.0f for simplicity.
+        // quick and dirty generation of points
+        // not random at all, but I don't care.
+        pts[i].x = ((float)rand())/RAND_MAX * SPACE;
+        pts[i].y = ((float)rand())/RAND_MAX * SPACE;
+        pts[i].z = ((float)rand())/RAND_MAX * SPACE;
+        pts[i].w = 1.0f; // size = 1.0f for simplicity.
     }
     return pts;
 }
