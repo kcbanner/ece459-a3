@@ -31,7 +31,7 @@ __kernel void nbody(global const float4* P, global const float4* A, global float
   size = get_global_size(0);
 
   myPosition = P[id];
-
+  acc = (float4)(0.0f, 0.0f, 0.0f, 1.0f);
   for (i = 0; i < size; i++) {
     bodyBodyInteraction(myPosition, P[i], &acc);
   }
