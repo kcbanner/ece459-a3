@@ -1,12 +1,16 @@
 /* nbody simulation, version 0 */
 /* Modified by Patrick Lam; original source: GPU Gems, Chapter 31 */
 
-#include <CL/cl.h>
+#define __CL_ENABLE_EXCEPTIONS
+
+#include <CL/cl.hpp>
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
 #include <iostream>
 #include <fstream>
+#include <string>
+#include <vector>
 
 #define EPS 1e-10
 
@@ -19,7 +23,7 @@
 #define POSITION_BUFFER 1
 #define ACCELLERATION_BUFFER 2
 
-cl_float4* runKernel(const char* source);
+void runKernel(const char* source);
 
 void bodyBodyInteraction(cl_float4 bi, cl_float4 bj, cl_float4 *ai) {
     cl_float4 r;
@@ -106,36 +110,69 @@ int main(int argc, char ** argv)
     return 0;
 }
 
-cl_float4* runKernel(const char* source)
+void runKernel(std::string sourceCode, cl_float4* x, cl_float4* a)
 {
-    cl_platform_id platform_id;
-    clGetPlatformIDs(1, &platform_id, NULL);
+    try {
+        // Get available platforms
+        std::vector<cl::Platform> platforms;
+        cl::Platform::get(&platforms);
 
-    cl_device_id device;
-    clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_GPU, 1, &device, NULL);
+        // Select the default platform and create a context using this platform and the GPU
+        cl_context_properties cps[3] = { 
+            CL_CONTEXT_PLATFORM, 
+            (cl_context_properties)(platforms[0])(), 
+            0 
+        };
+        cl::Context context(CL_DEVICE_TYPE_GPU, cps);
 
-    cl_context context = clCreateContext(NULL, 1, &device, NULL, NULL, NULL);
-    cl_command_queue queue = clCreateCommandQueue(context, device, 0, NULL);
+        // Get a list of devices on this platform
+        std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
 
-    cl_program program = clCreateProgramWithSource(context, 1, &source, NULL, NULL);
-    clBuildProgram(program, 1, &device, NULL, NULL, NULL);
-    cl_kernel kernel = clCreateKernel(program, "nbody", NULL);
+        // Create a command queue and use the first device
+        cl::CommandQueue queue = cl::CommandQueue(context, devices[0]);
 
-    cl_mem position_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY, POINTS * sizeof(cl_float4), NULL, NULL);
-    cl_mem accelleration_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, POINTS * sizeof(cl_float4), NULL, NULL);
+        cl::Program::Sources source(1, std::make_pair(sourceCode.c_str(), sourceCode.length()+1));
 
-    int work_size = POINTS;
-    size_t size = POINTS;
-    clSetKernelArg(kernel, BUFFER_SIZE, sizeof(work_size), (void*) &work_size);
-    clSetKernelArg(kernel, POSITION_BUFFER, sizeof(position_buffer), (void*) &position_buffer);
-    clSetKernelArg(kernel, ACCELLERATION_BUFFER, sizeof(accelleration_buffer), (void*) &accelleration_buffer);
+        // Make program of the source code in the context
+        cl::Program program = cl::Program(context, source);
 
-    clEnqueueNDRangeKernel(queue, kernel, 1, NULL, &size, NULL, 0, NULL, NULL);
+        // Build program for these specific devices
+        program.build(devices);
 
-    clFinish(queue);
+        // Make kernel
+        cl::Kernel kernel(program, "nbody");
 
-    cl_float4* ptr;
-    ptr = (cl_float4*) clEnqueueMapBuffer(queue, accelleration_buffer, CL_TRUE, CL_MAP_READ, 0, POINTS*sizeof(cl_float4), 0, NULL, NULL, NULL);
+        // Create memory buffers
+        cl::Buffer position_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, POINTS * sizeof(cl_float4));
+        cl::Buffer accelleration_buffer = cl::Buffer(context, CL_MEM_READ_WRITE, POINTS * sizeof(cl_float4));
 
-    return ptr;    
+        // Copy lists A and B to the memory buffers
+        queue.enqueueWriteBuffer(position_buffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), x);
+        queue.enqueueWriteBuffer(accelleration_buffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), a);
+
+        // Set arguments to kernel
+        int buffer_size = POINTS;
+        kernel.setArg(BUFFER_SIZE, buffer_size);
+        kernel.setArg(POSITION_BUFFER, position_buffer);
+        kernel.setArg(ACCELLERATION_BUFFER, accelleration_buffer);
+
+        // Run the kernel on specific ND range
+        cl::NDRange global(POINTS);
+        cl::NDRange local(1);
+        queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, cl::NullRange);
+
+        // Read buffer C into a local list
+        cl_float4* new_a = new cl_float4[POINTS];
+        queue.enqueueReadBuffer(accelleration_buffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), new_a);
+
+        for(int i = 0; i < POINTS; i ++) {
+            printf("(%2.2f,%2.2f,%2.2f,%2.2f) (%2.3f,%2.3f,%2.3f)\n", 
+               x[i].x, x[i].y, x[i].z, x[i].w,
+               new_a[i].x, new_a[i].y, new_a[i].z);
+        }
+
+    } catch(cl::Error error) {
+        std::cout << error.what() << "(" << error.err() << ")" << std::endl;
+    }
+    
 }
