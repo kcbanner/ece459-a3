@@ -13,6 +13,9 @@ bin:
 bin/nbody-seq: src/nbody-seq.c
 	$(CC) $(CFLAGS) -o bin/nbody-seq $<
 
+bin/nbody-ocl: src/nbody-ocl.c
+	$(CXX) $(CFLAGS) -o bin/nbody-ocl $<
+
 report.pdf: report/report.tex
 	cd report && pdflatex report.tex && pdflatex report.tex
 	mv report/report.pdf report.pdf
