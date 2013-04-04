@@ -23,39 +23,6 @@
 #define POSITION_BUFFER 1
 #define ACCELLERATION_BUFFER 2
 
-void runKernel(const char* source);
-
-void bodyBodyInteraction(cl_float4 bi, cl_float4 bj, cl_float4 *ai) {
-    cl_float4 r;
-    
-    r.x = bj.x - bi.x;
-    r.y = bj.y - bi.y;
-    r.z = bj.z - bi.z;
-    r.w = 1.0f;
-
-    float distSqr = r.x * r.x + r.y * r.y + r.z * r.z + EPS;
-
-    float distSixth = distSqr * distSqr * distSqr;
-    float invDistCube = 1.0f/sqrtf(distSixth);
-
-    float s = bj.w * invDistCube;
-
-    ai->x += r.x * s;
-    ai->y += r.y * s;
-    ai->z += r.z * s;
-}
-
-void calculateForces(int points, int global_id, cl_float4 * globalP, cl_float4 * globalA) {
-    cl_float4 myPosition = globalP[global_id];
-    int i;
-
-    cl_float4 acc = {{0.0f, 0.0f, 0.0f, 1.0f}};
-    
-    for (i = 0; i < points; i ++) {
-	bodyBodyInteraction(myPosition, globalP[i], &acc);
-    }
-    globalA[global_id] = acc;
-}
 
 cl_float4 * initializePositions() {
     cl_float4 * pts = (cl_float4*) malloc(sizeof(cl_float4)*POINTS);
@@ -92,27 +59,9 @@ std::string* loadKernelSource() {
   return contents;
 }
 
-int main(int argc, char ** argv)
-{
-    cl_float4 * x = initializePositions();
-    cl_float4 * a = initializeAccelerations();
-
-    int i;
-    for (i = 0; i < POINTS; i++)
-	calculateForces(POINTS, i, x, a);
-
-    for (i = 0; i < POINTS; i++)
-	printf("(%2.2f,%2.2f,%2.2f,%2.2f) (%2.3f,%2.3f,%2.3f)\n", 
-	       x[i].x, x[i].y, x[i].z, x[i].w,
-	       a[i].x, a[i].y, a[i].z);
-    free(x);
-    free(a);
-    return 0;
-}
-
 void runKernel(std::string sourceCode, cl_float4* x, cl_float4* a)
 {
-    try {
+    
         // Get available platforms
         std::vector<cl::Platform> platforms;
         cl::Platform::get(&platforms);
@@ -137,6 +86,7 @@ void runKernel(std::string sourceCode, cl_float4* x, cl_float4* a)
         cl::Program program = cl::Program(context, source);
 
         // Build program for these specific devices
+    try{
         program.build(devices);
 
         // Make kernel
@@ -173,6 +123,30 @@ void runKernel(std::string sourceCode, cl_float4* x, cl_float4* a)
 
     } catch(cl::Error error) {
         std::cout << error.what() << "(" << error.err() << ")" << std::endl;
+
+        std::string build_log;
+        build_log = program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(devices[0]);
+        std::cout << build_log << "" <<std::endl;
+
+        build_log = program.getBuildInfo<CL_PROGRAM_BUILD_OPTIONS>(devices[0]);
+        std::cout << build_log << std::endl;
+
+        build_log = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]);
+        std::cout << build_log << std::endl;
     }
     
+}
+
+
+int main(int argc, char ** argv)
+{
+    cl_float4 * x = initializePositions();
+    cl_float4 * a = initializeAccelerations();
+
+    std::string* source = loadKernelSource();
+    runKernel(*source, x, a);
+
+    free(x);
+    free(a);
+    return 0;
 }
