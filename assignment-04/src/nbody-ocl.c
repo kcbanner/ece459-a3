@@ -18,7 +18,8 @@
 #define SPACE 1000.0f;
 
 #define POSITION_BUFFER 0
-#define ACCELLERATION_BUFFER 1
+#define ACCELLERATION_IN_BUFFER 1
+#define ACCELLERATION_OUT_BUFFER 2
 
 
 cl_float4 * initializePositions() {
@@ -90,18 +91,21 @@ void runKernel(std::string sourceCode, cl_float4* x, cl_float4* a)
         cl::Kernel kernel(program, "nbody");
 
         // Create memory buffers
+
         cl::Buffer position_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, POINTS * sizeof(cl_float4));
-        cl::Buffer accelleration_buffer = cl::Buffer(context, CL_MEM_READ_WRITE, POINTS * sizeof(cl_float4));
+        cl::Buffer accelleration_in_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, POINTS * sizeof(cl_float4));
+        cl::Buffer accelleration_out_buffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, POINTS * sizeof(cl_float4));
 
-        // Copy lists A and B to the memory buffers
+        // Copy lists the memory buffers
         queue.enqueueWriteBuffer(position_buffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), x);
-        queue.enqueueWriteBuffer(accelleration_buffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), a);
-
+        queue.enqueueWriteBuffer(accelleration_in_buffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), a);
+        
         // Set arguments to kernel
         //int buffer_size = POINTS;
         //kernel.setArg(BUFFER_SIZE, buffer_size);
         kernel.setArg(POSITION_BUFFER, position_buffer);
-        kernel.setArg(ACCELLERATION_BUFFER, accelleration_buffer);
+        kernel.setArg(ACCELLERATION_IN_BUFFER, accelleration_in_buffer);
+        kernel.setArg(ACCELLERATION_OUT_BUFFER, accelleration_out_buffer);
 
         // Run the kernel on specific ND range
         cl::NDRange global(POINTS);
@@ -110,7 +114,7 @@ void runKernel(std::string sourceCode, cl_float4* x, cl_float4* a)
 
         // Read buffer C into a local list
         cl_float4* new_a = new cl_float4[POINTS];
-        queue.enqueueReadBuffer(accelleration_buffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), new_a);
+        queue.enqueueReadBuffer(accelleration_out_buffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), new_a);
 
         for(int i = 0; i < POINTS; i ++) {
             printf("(%2.2f,%2.2f,%2.2f,%2.2f) (%2.3f,%2.3f,%2.3f)\n", 
