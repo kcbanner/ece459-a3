@@ -84,7 +84,7 @@ cl_float4 * initializeAccelerations() {
     return pts;
 }
 
-std::string* loadKernel() {
+std::string* loadKernelSource() {
   std::ifstream file("src/bruteforce-kernel.cl"); 
   std::string* contents = new std::string((std::istreambuf_iterator<char>(file)),
                                           (std::istreambuf_iterator<char>()));
