@@ -13,7 +13,11 @@
 #define POINTS 500 * 64
 #define SPACE 1000.0f;
 
-int getOpenClContext(const char* source);
+#define BUFFER_SIZE 0
+#define POSITION_BUFFER 1
+#define ACCELLERATION_BUFFER 2
+
+cl_float4* runKernel(const char* source);
 
 void bodyBodyInteraction(cl_float4 bi, cl_float4 bj, cl_float4 *ai) {
     cl_float4 r;
@@ -92,7 +96,7 @@ int main(int argc, char ** argv)
     return 0;
 }
 
-int getOpenClContext(const char* source)
+cl_float4* runKernel(const char* source)
 {
     cl_platform_id platform_id;
     clGetPlatformIDs(1, &platform_id, NULL);
@@ -101,6 +105,27 @@ int getOpenClContext(const char* source)
     clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_GPU, 1, &device, NULL);
 
     cl_context context = clCreateContext(NULL, 1, &device, NULL, NULL, NULL);
-    cl_program program = clCreateProgramWithSource(context, 1, &source, NULL, NULL);
+    cl_command_queue queue = clCreateCommandQueue(context, device, 0, NULL);
 
+    cl_program program = clCreateProgramWithSource(context, 1, &source, NULL, NULL);
+    clBuildProgram(program, 1, &device, NULL, NULL, NULL);
+    cl_kernel kernel = clCreateKernel(program, "nbody", NULL);
+
+    cl_mem position_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY, POINTS * sizeof(cl_float4), NULL, NULL);
+    cl_mem accelleration_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, POINTS * sizeof(cl_float4), NULL, NULL);
+
+    int work_size = POINTS;
+    size_t size = POINTS;
+    clSetKernelArg(kernel, BUFFER_SIZE, sizeof(work_size), (void*) &work_size);
+    clSetKernelArg(kernel, POSITION_BUFFER, sizeof(position_buffer), (void*) &position_buffer);
+    clSetKernelArg(kernel, ACCELLERATION_BUFFER, sizeof(accelleration_buffer), (void*) &accelleration_buffer);
+
+    clEnqueueNDRangeKernel(queue, kernel, 1, NULL, &size, NULL, 0, NULL, NULL);
+
+    clFinish(queue);
+
+    cl_float4* ptr;
+    ptr = (cl_float4*) clEnqueueMapBuffer(queue, accelleration_buffer, CL_TRUE, CL_MAP_READ, 0, POINTS*sizeof(cl_float4), 0, NULL, NULL, NULL);
+
+    return ptr;    
 }
