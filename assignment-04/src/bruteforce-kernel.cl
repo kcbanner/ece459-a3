@@ -18,7 +18,7 @@ void bodyBodyInteraction(cl_float4 bi, cl_float4 bj, cl_float4 *ai) {
     ai->z += r.z * s;
 }
 
-__kernel void nbody(global const int points, global cl_float4* A, global const cl_float4* P) {
+__kernel void nbody(global const int points, global const cl_float4* P, global cl_float4* A) {
   int i;
   int id;
   cl_float4 myPosition;
