@@ -7,23 +7,647 @@
 \pagestyle{empty}
 
 \title{ECE 459: Programming for Performance\\Assignment 3}
-\author{Group Members}
+\author{Casey Banner and Stephan van den Heuvel}
 \date{March 25, 2013}
 
-% Code listing style
-\lstset{frame=single}
+\lstset{
+  frame=single,
+  basicstyle=\ttfamily\footnotesize,
+  framesep=10pt,
+  aboveskip=10pt,
+  belowskip=10pt
+}
+
 
 \begin{document}
 
 \maketitle
 
-\begin{lstlisting}
-#include <iostream>
+\section*{Baseline Performance}
 
-int main(int argc, char *argv[])
-{
-    std::cout << "Example code listing" << std::endl;
-}
+% - Talk about 25s avg execution time
+% - Talk about Google Profiler, and how it is instrumented
+
+% 25.641 + 25.348 + 26.820 + 26.817 + 25.530
+
+The execution time of the provided assignment code over an average of
+5 runs was $26.031$s. In order to understand where time was being spent
+within the model the gperftools CPU profiler was used. For profiling
+purposes, the test harness was instrumented as follows:
+
+\begin{lstlisting}[language=C]
+ProfilerStart("morph.profile");
+m.morph(0, 0.5, 1.25, 0.2);
+m.morph(1, 0.5, 1.25, 0.2);
+ProfilerStop();
 \end{lstlisting}
+
+The resultant profile was then analyzed with the \texttt{pprof}
+utility in order to get a line-by-line breakdown of how the execution
+time was distributed. An excerpt of the output follows:
+
+\begin{lstlisting}
+     1      1  110:  double ww[lines];
+    29     29  111:  QPoint pp[lines];
+     .      .  112:
+     .      .  113:  // for each line
+     8      8  114:  for(int k=0; k<lines; ++k) {
+     .      .  115:
+     .      .  116:      // get original lines from reference line
+    47     47  117:      QPoint P = listLines[h]->at(k).first;
+     .      .  118:      QPoint Q = listLines[h]->at(k).second;
+     .      .  119:
+    35     35  120:      QVector2D XP(X - P);
+    37     37  121:      QVector2D QP(Q - P);
+     .      .  122:
+    40     40  123:      QVector2D pQP(QP.y(), -QP.x());
+     .      .  124:
+     .      .  125:      // Calculate u, v
+   414    414  126:      u = QVector2D::dotProduct(XP, QP) /  QP.lengthSquared();
+     .      .  127:      v = QVector2D::dotProduct(XP, pQP) / QP.length();
+     .      .  128:
+     .      .  129:      // get interpolating lines from reference line
+     7      7  130:      QPoint P2 = listAux[h]->at(k).first;
+     .      .  131:      QPoint Q2 = listAux[h]->at(k).second;
+     .      .  132:
+    23     23  133:      QVector2D Q2P2(Q2 - P2);
+    24     24  134:      QVector2D pQ2P2(Q2P2.y(), -Q2P2.x());
+     .      .  135:
+   438    438  136:      QVector2D X2 = QVector2D(P2) + u*Q2P2 + (v*pQ2P2)
+                                        / Q2P2.length();
+     .      .  137:
+   126    126  138:      QPoint p = X2.toPoint() - X;
+     .      .  139:
+
+                         ...
+
+     .      .  145:      double w = 0;
+     1      1  146:      w =  pow(QP.length(), VARP);
+     8      8  147:      w /= (VARA + dist);
+    21     21  148:      w = pow(w, VARB);
+     .      .  149:
+     8      8  150:      ww[k] = w;
+    11     11  151:      pp[k] = p;
+     .      .  152:  }
+     .      .  153:
+     .      .  154:  QPoint sum(0.0, 0.0);
+     .      .  155:  double wsum = 0;
+    45     45  156:  for(int k=0; k<lines; ++k) {
+   261    261  157:      sum  += ww[k] * pp[k];
+     .      .  158:      wsum += ww[k];
+     .      .  159:  }
+   108    108  160:  sum /= wsum;
+\end{lstlisting}
+
+From this analysis we can see that the areas where the most time is spent are:
+
+% - length() is slow
+% - big calculations are slow (u, v)
+% - the final summation loop is slow
+
+\begin{itemize}
+  \item The \texttt{u} and \texttt{v} calculations
+  \item The \texttt{X2} calculation
+  \item The weighted sum calculation
+  \item The calculation of \texttt{w} and \texttt{p}
+\end{itemize}
+
+The \texttt{w} calculation involves expensive calls to \texttt{pow}
+with fractional exponents, and we can see the effects of this in the
+\texttt{pprof --text} output:
+
+\begin{lstlisting}
+  2365  37.0%  37.0%     2365  37.0% __log10_finite
+  1784  27.9%  64.8%     1784  27.9% Model::morph
+  1381  21.6%  86.4%     1381  21.6% __exp_finite
+   230   3.6%  90.0%      230   3.6% 00007f19fa8f8b7f
+   120   1.9%  91.9%      120   1.9% pow
+    61   1.0%  92.9%       61   1.0% 00007f19fa34ecec
+\end{lstlisting}
+
+\section*{Improvements}
+
+\subsection*{Precalculation and SIMD}
+
+The first changes that were done were improvements to the sequential
+execution time. The change involved precalculating everything that was
+only dependant on \texttt{k} a single time before the \texttt{for}
+loops. All of the precalculated results were stored in arrays that
+were keyed on \texttt{k}. These arrays were put on the stack in order
+to improve locality. Also, an optimized version of the weighted sum
+loop was created using GCC's SIMD intrinsics for the special case of
+\texttt{lines = 4}. 
+
+The code diff is as follows:
+
+\begin{lstlisting}[caption={Precalculation and SIMD code diff}]
+diff --git a/model.cpp b/model.cpp
+index 614f25b..23fdea9 100644
+--- a/model.cpp
++++ b/model.cpp
+@@ -1,2 +1,9 @@
+ #include "model.h"
+ 
++typedef double  v4df  __attribute__ ((vector_size (32)));  /* double[4], AVX  */
++
++union vec4d {
++	v4df v;
++	double a[4];
++};
++
+
+ Model::Model() {
+-    for (unsigned int i = 0; i < NUM_IMAGES; ++i) imgs[i] = new QImage();
++  for (unsigned int i = 0; i < NUM_IMAGES; ++i) imgs[i] = new QImage();
+ 
+-    listLines = new vector<pair <QPoint, QPoint> >* [2];
+-    listAux = new vector<pair <QPoint, QPoint> >* [2];
++  listLines = new vector<pair <QPoint, QPoint> >* [2];
++  listAux = new vector<pair <QPoint, QPoint> >* [2];
+ }
+  
+ void Model::morph(int h, double VARA, double VARB, double VARP) {
+-    int n = 0;
+-    int lines = listLines[0]->size();
+-
+-    for(int i=0; i<wimg; ++i) {
+-        for(int j=0; j<himg; ++j) {
+-            
+-            QPoint X(i, j);
+-            double u, v;
+-            
+-            double ww[lines];
+-            QPoint pp[lines];
++  int lines = listLines[0]->size();
++  
++  pair<QPoint, QPoint>* linesData = listLines[h]->data();
++  pair<QPoint, QPoint>* auxData = listAux[h]->data();
++
++  // Memoize  
++
++  double QPs_x[lines];
++  double QPs_y[lines];  
++  double pQPs_x[lines];
++  double pQPs_y[lines];
++
++  QVector2D Q2P2s[lines];
++  QVector2D pQ2P2s[lines];
++  double QPlengths[lines];
++  double QPlengthsSquared[lines];
++  double Q2P2lengths[lines];
++  double powVARP[lines];
++  for(int k = 0; k < lines; ++k) {
++    QVector2D QP;
++    QVector2D pQP;
++    
++    QPoint P = linesData[k].first;
++    QPoint Q = linesData[k].second;
++    QPoint P2 = auxData[k].first;
++    QPoint Q2 = auxData[k].second;
++
++    QP = QVector2D(Q - P);
++    pQP = QVector2D(QP.y(), -QP.x());
++    QPlengthsSquared[k] = QP.lengthSquared();
++    QPlengths[k] = QP.length();
++    
++    QPs_x[k] = QP.x();
++    QPs_y[k] = QP.y();
++    pQPs_x[k] = pQP.x();
++    pQPs_y[k] = pQP.y();
++
++    powVARP[k] = pow(QPlengths[k], VARP);
++    Q2P2s[k] = QVector2D(Q2 - P2);
++    pQ2P2s[k] = QVector2D(Q2P2s[k].y(), -Q2P2s[k].x());
++    Q2P2lengths[k] = Q2P2s[k].length();
++  }
++
++  for(int i=0; i<wimg; ++i) {
++    for(int j=0; j<himg; ++j) {
++      QPoint X(i, j);
+             
+-            // for each line
+-            for(int k=0; k<lines; ++k) {
+-                
+-                // get original lines from reference line
+-                QPoint P = listLines[h]->at(k).first;
+-                QPoint Q = listLines[h]->at(k).second;
+-                
+-                QVector2D XP(X - P);
+-                QVector2D QP(Q - P);
+-                
+-                QVector2D pQP(QP.y(), -QP.x());
+-                
+-                // Calculate u, v
+-                u = QVector2D::dotProduct(XP, QP) /  QP.lengthSquared();
+-                v = QVector2D::dotProduct(XP, pQP) / QP.length();
+-
+-                // get interpolating lines from reference line
+-                QPoint P2 = listAux[h]->at(k).first;
+-                QPoint Q2 = listAux[h]->at(k).second;
+-
+-                QVector2D Q2P2(Q2 - P2);
+-                QVector2D pQ2P2(Q2P2.y(), -Q2P2.x());
+-
+-                QVector2D X2 = QVector2D(P2) + u * Q2P2 + (v * pQ2P2) /
+                                Q2P2.length();
+-
+-                QPoint p = X2.toPoint() - X;
+-
+-                double dist = 0;
+-                if(u > 0 && u < 1) dist = fabs(v);
+-                else if(u <= 0) dist = sqrt(pow(X.x() - P.x(), 2.0) + 
+                                             pow(X.y() - P.y(), 2.0));
+-                else dist = sqrt(pow(X.x() - Q.x(), 2.0) +
+                                  pow(X.y() - Q.y(), 2.0));
+-
+-                double w = 0;
+-                w =  pow(QP.length(), VARP);
+-                w /= (VARA + dist);
+-                w = pow(w, VARB);
+-
+-                ww[k] = w;
+-                pp[k] = p;
+-            }
+-
+-            QPoint sum(0.0, 0.0);
+-            double wsum = 0;
+-            for(int k=0; k<lines; ++k) {
+-                sum  += ww[k] * pp[k];
+-                wsum += ww[k];
+-            }
+-            sum /= wsum;
+-
+-            QPoint X2 = X + sum;
+-
+-            double y0, x0;
+-            x0 = ceil(X2.x());
+-            if(x0 < 0) x0 = 0;
+-            if(x0 >= wimg) x0 = wimg-1;
+-
+-            y0 = ceil(X2.y());
+-            if(y0 < 0) y0 = 0;
+-            if(y0 >= himg) y0 = himg-1;
+-
+-            X2 = QPoint(x0, y0);
+-
+-            if(X2 == X) n++;
+-            imgs[h+2]->setPixel(X, imgs[h]->pixel(X2));
++      vec4d ww;
++      vec4d pp_x;
++      vec4d pp_y;
++      
++      double u[lines];
++      double v[lines];
++
++      for(int k = 0; k < lines; ++k) {
++        QPoint P = linesData[k].first;
++        double XPx = X.x() - P.x();
++        double XPy = X.y() - P.y();
++
++        u[k] = (XPx * QPs_x[k] + XPy * QPs_y[k]) / QPlengthsSquared[k];
++        v[k] = (XPx * pQPs_x[k] + XPy * pQPs_y[k]) / QPlengths[k];        
++      }
++
++      QVector2D X2s[lines];
++      for(int k = 0; k < lines; ++k) {
++        QPoint P2 = auxData[k].first;
++        X2s[k] = QVector2D(P2) + u[k] * Q2P2s[k] + (v[k] * pQ2P2s[k]) /
+                            Q2P2lengths[k];
++      }
++
++      for(int k = 0; k < lines; ++k) {
++        QPoint P = linesData[k].first;
++
++        double dist = 0;
++        if(u[k] > 0 && u[k] < 1) {
++          dist = fabs(v[k]);
++        } else {
++          QPoint Q = linesData[k].second;
++
++          if(u[k] <= 0) {
++            dist = sqrt(pow(X.x() - P.x(), 2.0) + pow(X.y() - P.y(), 2.0));
++          } else {
++            dist = sqrt(pow(X.x() - Q.x(), 2.0) + pow(X.y() - Q.y(), 2.0));
++          }
++        }
++
++        double w;
++        w =  powVARP[k];
++        w /= (VARA + dist);
++        w = pow(w, VARB);
++
++        ww.a[k] = w;
++        pp_x.a[k] = qRound(X2s[k].x()) - X.x();
++        pp_y.a[k] = qRound(X2s[k].y()) - X.y();
++      }
++
++      int sum_x = 0;
++      int sum_y = 0;
++      double wsum = 0.0;
++	    
++      if (lines == 4) {
++        vec4d product;
++        vec4d sum;
++
++        product.v = __builtin_ia32_mulpd256(ww.v, pp_x.v);
++        sum.v = __builtin_ia32_roundpd256(product.v, 0);
++        sum_x = (int)sum.a[0] + (int)sum.a[1] + (int)sum.a[2] + (int)sum.a[3];
++	
++        product.v = __builtin_ia32_mulpd256(ww.v, pp_y.v);
++        sum.v = __builtin_ia32_roundpd256(product.v, 0);
++        sum_y = (int)sum.a[0] + (int)sum.a[1] + (int)sum.a[2] + (int)sum.a[3];
++
++        wsum += ww.a[0];
++        wsum += ww.a[1];
++        wsum += ww.a[2];
++        wsum += ww.a[3];
++      } else {
++        printf("error\n");
++
++        for(int k=0; k<lines; ++k) {
++          sum_x  += ww.a[k] * pp_x.a[k];
++          sum_y  += ww.a[k] * pp_y.a[k];			
++          wsum += ww.a[k];
+         }
++      }
++
++      sum_x = qRound(sum_x / wsum);
++      sum_y = qRound(sum_y / wsum);
++
++      QPoint X2 = X + QPoint(sum_x, sum_y);
++
++      double y0, x0;
++      x0 = ceil(X2.x());
++      if(x0 < 0) x0 = 0;
++      if(x0 >= wimg) x0 = wimg-1;
++
++      y0 = ceil(X2.y());
++      if(y0 < 0) y0 = 0;
++      if(y0 >= himg) y0 = himg-1;
++
++      X2 = QPoint(x0, y0);
++
++      imgs[h+2]->setPixel(X, imgs[h]->pixel(X2));
+     }
++  }
+ } 
+\end{lstlisting}
+
+This code was run five times again to measure the improved execution
+time. The average runtime after these improvements were made was
+$17.588$s. The results of the benchmark can be seen in
+Table~\ref{tbl-precalculation}.
+
+% >>> (17.783 + 17.635 + 17.447 + 17.249 + 17.827) / 5
+% 17.5882
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{lr}
+    & {\bf Time (s)} \\
+    \hline
+    Run 1 & 17.783 \\
+    Run 2 & 17.635 \\
+    Run 3 & 17.447 \\
+    Run 4 & 17.249 \\
+    Run 5 & 17.827 \\
+    \hline
+    Average & 17.588 \\
+  \end{tabular}
+  \caption{Benchmark results for precalculation and SIMD optimizations}
+  \label{tbl-precalculation}
+\end{table}
+
+This optimization improved runtime because instead of doing the
+calculations for \texttt{QP}, \texttt{pQP}, \texttt{Q2P2},
+\texttt{pQ2P2}, the lengths of \texttt{QP} and \texttt{Q2P2}, and the
+\texttt{pow} call every pixel, they are done a single time. The cost
+of these optimizations is increased memory usage, but that usage is
+far eclipsed by the memory required to store the resultant image. This
+change doesn't affect the output because the calculations being made
+are the exact same, they are simply being performed once instead
+of $i*j$ times.
+
+The SIMD optimization was beneficial because it allowed all the
+multiplications between \texttt{ww} and \texttt{pp} to be performed in
+two instructions. The expensive \texttt{qRound} calls that were
+happening in \texttt{QPoint::operator*=} were also optimized away into
+an AVX instruction that does rounding. Again, the output is the same
+because no calculations are being changed, they have just been
+rearranged.
+
+\subsection*{Threading}
+
+The second major improvement done was to make the code multithreaded. We accomplished this using pthreads, as shown in the diff given by Listing~\ref{lst:Pthreads}.
+
+\begin{lstlisting}[caption={Pthreads},label={lst:Pthreads}]
+diff --git a/model.cpp b/model.cpp
+index 23fdea9..26e59e5 100644
+--- a/model.cpp
++++ b/model.cpp
+@@ -1,5 +1,8 @@
++#include <pthread.h>
+ #include "model.h"
+ 
++#define NUM_THREADS 16
++
+
+ 
++struct MemoizedData {
++  int h;
++  double VARA;
++  double VARB;
++  double VARP;
++
++  pair<QPoint, QPoint>* linesData;
++  pair<QPoint, QPoint>* auxData;
++  QImage** imgs;
++  int lines;
++  int himg;
++  int wimg;
++  double *QPs_x;
++  double *QPs_y;
++  double *pQPs_x;
++  double *pQPs_y;
++  QVector2D *Q2P2s;
++  QVector2D *pQ2P2s;
++  double *QPlengths;
++  double *QPlengthsSquared;
++  double *Q2P2lengths;
++  double *powVARP;
++};
++
++struct ThreadData {
++  int i;
++  int iterations;
++  
++  MemoizedData* data;
++};
++
++void* morph_thread(void* arg);
++
+ Model::Model() {
+   for (unsigned int i = 0; i < NUM_IMAGES; ++i) imgs[i] = new QImage();
+ 
+@@ -116,7 +152,6 @@ void Model::morph(int h, double VARA, double VARB, 
+                                      double VARP) {
+   double QPs_y[lines];  
+   double pQPs_x[lines];
+   double pQPs_y[lines];
+-
+   QVector2D Q2P2s[lines];
+   QVector2D pQ2P2s[lines];
+   double QPlengths[lines];
+@@ -148,8 +183,69 @@ void Model::morph(int h, double VARA, double VARB, 
+                                       double VARP) {
+     Q2P2lengths[k] = Q2P2s[k].length();
+   }
+ 
+-  for(int i=0; i<wimg; ++i) {
+-    for(int j=0; j<himg; ++j) {
++
++  MemoizedData data;
++  data.wimg = wimg;
++  data.himg = himg;
++  data.imgs = imgs;
++  data.linesData = linesData;
++  data.auxData = auxData;
++  data.h = h;
++  data.lines = lines;
++  data.VARA = VARA;
++  data.VARB = VARB;
++  data.VARP = VARP;
++  data.QPs_x = QPs_x;
++  data.QPs_y = QPs_y;
++  data.pQPs_x = pQPs_x;
++  data.pQPs_y = pQPs_y;
++  data.Q2P2s = Q2P2s ;
++  data.pQ2P2s = pQ2P2s;
++  data.QPlengths = QPlengths;
++  data.QPlengthsSquared = QPlengthsSquared;
++  data.Q2P2lengths = Q2P2lengths;
++  data.powVARP = powVARP;
++
++  
++  pthread_t threads[NUM_THREADS];
++  ThreadData threadData[NUM_THREADS];
++
++  int offset_stride = himg/NUM_THREADS;
++  int offset = 0;
++  for(int i=0; i <NUM_THREADS; i++) {
++    threadData[i].i = offset;
++    threadData[i].iterations = offset_stride;
++    threadData[i].data = &data;
++    offset += offset_stride;
++
++    if(i == NUM_THREADS -1) {
++      threadData[i].iterations += himg % NUM_THREADS;
++    }
++    
++    pthread_create(&threads[i], NULL,  morph_thread, &threadData[i]);
++  }
++
++  for(int i=0; i <NUM_THREADS; i++) {
++    pthread_join(threads[i], NULL);
++  }
++  
++
++}
++
++void* morph_thread(void* arg) {
++  ThreadData* threadData = (ThreadData*) arg;
++  MemoizedData* d = threadData->data;
++
++  int h = d->h;
++  int lines = d->lines;
++  double VARA = d->VARA;
++  double VARB = d->VARB;
++  QImage** imgs = d->imgs;
++  int wimg = d->wimg;
++  int himg = d->himg;
++
++  for(int j=threadData->i; j< (threadData->i + threadData->iterations); ++j) {
++    for(int i=0; i<wimg; ++i) {
+       QPoint X(i, j);
+             
+       vec4d ww;
+@@ -160,28 +256,28 @@ void Model::morph(int h, double VARA, double VARB, 
+                                        double VARP) {
+       double v[lines];
+ 
+       for(int k = 0; k < lines; ++k) {
+-        QPoint P = linesData[k].first;
++        QPoint P = d->linesData[k].first;
+         double XPx = X.x() - P.x();
+         double XPy = X.y() - P.y();
+ 
+-        u[k] = (XPx * QPs_x[k] + XPy * QPs_y[k]) / QPlengthsSquared[k];
+-        v[k] = (XPx * pQPs_x[k] + XPy * pQPs_y[k]) / QPlengths[k];        
++        u[k] = (XPx * d->QPs_x[k] + XPy * d->QPs_y[k]) / d->QPlengthsSquared[k];
++        v[k] = (XPx * d->pQPs_x[k] + XPy * d->pQPs_y[k]) / d->QPlengths[k];        
+       }
+ 
+       QVector2D X2s[lines];
+       for(int k = 0; k < lines; ++k) {
+-        QPoint P2 = auxData[k].first;
+-        X2s[k] = QVector2D(P2) + u[k] * Q2P2s[k] + (v[k] * pQ2P2s[k]) / 
+-        Q2P2lengths[k];
++        QPoint P2 = d->auxData[k].first;
++        X2s[k] = QVector2D(P2) + u[k] * d->Q2P2s[k] + (v[k] * d->pQ2P2s[k]) 
++       / d->Q2P2lengths[k];
+       }
+ 
+       for(int k = 0; k < lines; ++k) {
+-        QPoint P = linesData[k].first;
++        QPoint P = d->linesData[k].first;
+ 
+         double dist = 0;
+         if(u[k] > 0 && u[k] < 1) {
+           dist = fabs(v[k]);
+         } else {
+-          QPoint Q = linesData[k].second;
++          QPoint Q = d->linesData[k].second;
+ 
+           if(u[k] <= 0) {
+             dist = sqrt(pow(X.x() - P.x(), 2.0) + pow(X.y() - P.y(), 2.0));
+@@ -191,7 +287,7 @@ void Model::morph(int h, double VARA, double VARB, 
+                                      double VARP) {
+         }
+ 
+         double w;
+-        w =  powVARP[k];
++        w =  d->powVARP[k];
+         w /= (VARA + dist);
+         w = pow(w, VARB);
+ 
+
+\end{lstlisting}
+
+The benchmarks are given in the Table~\ref{tbl-pthread-bench}.
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{lr}
+    & {\bf Time (s)} \\
+    \hline
+    Run 1 & 9.600 \\
+    Run 2 & 9.852 \\
+    Run 3 & 9.320 \\
+    Run 4 & 9.578 \\
+    Run 5 & 9.526 \\
+    \hline
+    Average & 9.575 \\
+  \end{tabular}
+  \caption{Benchmark results for pthread optimization}
+  \label{tbl-pthread-bench}
+\end{table}
+
+The average time is 9.575, which is a 1.83 time speed-up over just the previous improvement alone. This version
+is faster because we can off-load the heavy lifting in the \texttt{Model::morph} method to all eight CPU cores. It is not an 8 times speed-up, as we only made parallel a section that consisted of abut 20\% of the program.
+
+This improvement does not change the fundamental operation of the program because it just splits the work
+into eight sub-images. The processing done on sub-images is independent and the resulting composite image is the same as the one produced by the original code.
+
+
 
 \end{document}
