@@ -12,8 +12,6 @@
 #include <string>
 #include <vector>
 
-#define EPS 1e-10
-
 /// runtime on my 2011 computer: 1m; in 2013, 27s.
 // on my 2011 laptop, 1m34s
 #define POINTS 500 * 64
@@ -126,13 +124,13 @@ void runKernel(std::string sourceCode, cl_float4* x, cl_float4* a)
 
         std::string build_log;
         build_log = program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(devices[0]);
-        std::cout << build_log << "" <<std::endl;
+        std::cout << "Build status: " << build_log << std::endl;
 
         build_log = program.getBuildInfo<CL_PROGRAM_BUILD_OPTIONS>(devices[0]);
-        std::cout << build_log << std::endl;
+        std::cout << "Build options: " << build_log << std::endl;
 
         build_log = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]);
-        std::cout << build_log << std::endl;
+        std::cout << "Build log: " << build_log << std::endl;
     }
     
 }
