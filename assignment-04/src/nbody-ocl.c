@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <iostream>
+#include <fstream>
 
 #define EPS 1e-10
 
@@ -70,6 +72,14 @@ cl_float4 * initializeAccelerations() {
 	pts[i].x = pts[i].y = pts[i].z = pts[i].w = 0;
     }
     return pts;
+}
+
+std::string* loadKernel() {
+  std::ifstream file("src/bruteforce-kernel.cl"); 
+  std::string* contents = new std::string((std::istreambuf_iterator<char>(file)),
+                                          (std::istreambuf_iterator<char>()));
+
+  return contents;
 }
 
 int main(int argc, char ** argv)
