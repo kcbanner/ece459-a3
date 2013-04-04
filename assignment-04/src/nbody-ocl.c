@@ -17,9 +17,8 @@
 #define POINTS 500 * 64
 #define SPACE 1000.0f;
 
-#define BUFFER_SIZE 0
-#define POSITION_BUFFER 1
-#define ACCELLERATION_BUFFER 2
+#define POSITION_BUFFER 0
+#define ACCELLERATION_BUFFER 1
 
 
 cl_float4 * initializePositions() {
@@ -99,8 +98,8 @@ void runKernel(std::string sourceCode, cl_float4* x, cl_float4* a)
         queue.enqueueWriteBuffer(accelleration_buffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), a);
 
         // Set arguments to kernel
-        int buffer_size = POINTS;
-        kernel.setArg(BUFFER_SIZE, buffer_size);
+        //int buffer_size = POINTS;
+        //kernel.setArg(BUFFER_SIZE, buffer_size);
         kernel.setArg(POSITION_BUFFER, position_buffer);
         kernel.setArg(ACCELLERATION_BUFFER, accelleration_buffer);
 
