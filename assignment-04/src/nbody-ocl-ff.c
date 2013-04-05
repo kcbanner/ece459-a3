@@ -110,7 +110,7 @@ void runKernel(cl::Context context, cl::CommandQueue queue, std::vector<cl::Devi
     
 }
 
-void computeBins(cl::Context context, cl::CommandQueue queue, std::vector<cl::Device>& devices, std::string sourceCode, cl_float4* x)
+cl_float4* computeBins(cl::Context context, cl::CommandQueue queue, std::vector<cl::Device>& devices, std::string sourceCode, cl_float4* x)
 {
 
         cl::Program::Sources source(1, std::make_pair(sourceCode.c_str(), sourceCode.length()+1));
@@ -152,7 +152,7 @@ void computeBins(cl::Context context, cl::CommandQueue queue, std::vector<cl::De
             printf("(%2.2f,%2.2f,%2.2f,%2.2f)\n", 
                bins[i].x, bins[i].y, bins[i].z, bins[i].w);
         }
-        delete[] bins;
+        return bins;
 
     } catch(cl::Error error) {
         std::cout << error.what() << "(" << error.err() << ")" << std::endl;
@@ -167,7 +167,71 @@ void computeBins(cl::Context context, cl::CommandQueue queue, std::vector<cl::De
         build_log = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]);
         std::cout << "Build log: " << build_log << std::endl;
     }
+    return NULL;
     
+}
+
+int* sortBins(cl::Context context, cl::CommandQueue queue, std::vector<cl::Device>& devices, std::string sourceCode,
+                    cl_float4* x, int* offsets, int arraySize)
+{
+
+        cl::Program::Sources source(1, std::make_pair(sourceCode.c_str(), sourceCode.length()+1));
+
+        // Make program of the source code in the context
+        cl::Program program = cl::Program(context, source);
+
+        // Build program for these specific devices
+    try{
+        program.build(devices);
+
+        // Make kernel
+        cl::Kernel kernel(program, "sort");
+
+        // Create memory buffers
+
+        cl::Buffer position_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, POINTS * sizeof(cl_float4));
+        cl::Buffer offsets_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, arraySize);
+        cl::Buffer bins_buffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, arraySize);
+
+        // Copy lists the memory buffers
+        queue.enqueueWriteBuffer(position_buffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), x);
+        queue.enqueueWriteBuffer(offsets_buffer, CL_TRUE, 0, BINS * sizeof(int), offsets);
+        
+        // Set arguments to kernel
+        //int buffer_size = POINTS;
+        //kernel.setArg(BUFFER_SIZE, buffer_size);
+        kernel.setArg(0, position_buffer);
+        kernel.setArg(1, offsets_buffer);
+        kernel.setArg(2, bins_buffer);
+
+        // Run the kernel on specific ND range
+        cl::NDRange global(BINS);
+        cl::NDRange local(1);
+        queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, cl::NullRange);
+
+        // Read buffer C into a local list
+        int* sortedBins = new int[arraySize];
+        queue.enqueueReadBuffer(bins_buffer, CL_TRUE, 0, BINS * sizeof(cl_float4), sortedBins);
+
+        for(int i = 0; i < arraySize; i ++) {
+            printf("(%d)\n", sortedBins[i]);
+        }
+        return sortedBins;
+
+    } catch(cl::Error error) {
+        std::cout << error.what() << "(" << error.err() << ")" << std::endl;
+
+        std::string build_log;
+        build_log = program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(devices[0]);
+        std::cout << "Build status: " << build_log << std::endl;
+
+        build_log = program.getBuildInfo<CL_PROGRAM_BUILD_OPTIONS>(devices[0]);
+        std::cout << "Build options: " << build_log << std::endl;
+
+        build_log = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]);
+        std::cout << "Build log: " << build_log << std::endl;
+    }
+    return NULL;
 }
 
 
@@ -176,6 +240,7 @@ int main(int argc, char ** argv)
     cl_float4 * x = initializePositions();
 
     std::string* bin_source = loadKernelSource("src/bin-kernel.cl");
+    std::string* sort_source = loadKernelSource("src/sort-kernel.cl");
     // Get available platforms
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
@@ -195,7 +260,20 @@ int main(int argc, char ** argv)
     cl::CommandQueue queue = cl::CommandQueue(context, devices[0]);
 
     //runKernel(context, queue, devices, *source, x);
-    computeBins(context, queue, devices, *bin_source, x);
+    cl_float4* bins = computeBins(context, queue, devices, *bin_source, x);
+    int cumsum = 0;
+    for(int i = 0; i < BINS; i++) {
+        cumsum += (int) bins[i].w;
+    }
+
+    int* offsets = (int*) malloc(sizeof(int)*BINS);
+
+    offsets[0] = 0;
+    for(int i =1; i < BINS; i++) {
+        offsets[i] = offsets[i-1] + bins[i-1].w;
+    }
+
+    sortBins(context, queue, devices, *sort_source, x, offsets, BINS*cumsum*sizeof(int));
 
     free(x);
     return 0;
