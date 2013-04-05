@@ -22,9 +22,9 @@ __kernel void sort(global const float4* points,
     for (i = 0; i < POINTS; i++) {
         point = points[i];
 
-        if ((point.x >= bin.x && point.x < (bin.x + BIN_SIZE)) && 
-            (point.y >= bin.y && point.y < (bin.y + BIN_SIZE)) && 
-            (point.z >= bin.z && point.z < (bin.z + BIN_SIZE))) {
+        if ((isgreaterequal(point.x, bin.x) && isless(point.x, (bin.x + BIN_SIZE))) && 
+            (isgreaterequal(point.y, bin.y) && isless(point.y, (bin.y + BIN_SIZE))) && 
+            (isgreaterequal(point.z, bin.z) && isless(point.z, (bin.z + BIN_SIZE)))) {
 
             // The point is within this bin
             

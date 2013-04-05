@@ -50,16 +50,49 @@ __kernel void forces(global const float4* points,
     // Next, find out what bin we are in
 
     int3 bin;
-    bin.x = myPosition.x / BIN_SIZE;
-    bin.y = myPosition.y / BIN_SIZE;
-    bin.z = myPosition.z / BIN_SIZE;
-
-    int binId = 
-        bin.x + 
-        bin.y * NUM_BINS + 
-        bin.z * NUM_BINS * NUM_BINS;
+    bin.x = trunc(myPosition.x / (float)BIN_SIZE);
+    bin.y = trunc(myPosition.y / (float)BIN_SIZE);
+    bin.z = trunc(myPosition.z / (float)BIN_SIZE);
     
     // Do the bodyBodyInteraction for every point in all the 3x3 bins surrounding us
+
+    int2 x = (int2)(bin.x - 1, bin.x + 1);
+    int2 y = (int2)(bin.y - 1, bin.y + 1);
+    int2 z = (int2)(bin.z - 1, bin.z + 1);
+    x = clamp(x, 0, 9);
+    y = clamp(y, 0, 9);
+    z = clamp(z, 0, 9);
+    
+    int j;
+    int k;
+    for (i = x.x; i <= x.y; i++) {
+        for (j = y.x; j <= y.y; j++) {
+            for (k = z.x; k <= z.y; k++) {
+                
+                // Loop over everything in this bin and bodyBodyInteraction it
+
+                int binId = 
+                    i + 
+                    j * NUM_BINS + 
+                    k * NUM_BINS * NUM_BINS;
+
+                int binIter;
+                for (binIter = 0; binIter < (int) cm[binId].w; binIter++) {
+                    bodyBodyInteraction(myPosition,
+                                        points[bins[offsets[binId] + binIter]],
+                                        &acc);
+                }
+                
+                float4 negBin;
+                negBin.x = 2*myPosition.x-cm[binId].x;
+                negBin.y = 2*myPosition.y-cm[binId].y;
+                negBin.z = 2*myPosition.z-cm[binId].z;
+                negBin.w = cm[binId].w;
+                bodyBodyInteraction(myPosition, negBin, &acc);
+
+            }
+        }
+    }
 
     out[id] = acc;
 };
