@@ -148,10 +148,10 @@ cl_float4* computeBins(cl::Context context, cl::CommandQueue queue, std::vector<
         cl_float4* bins = new cl_float4[BINS];
         queue.enqueueReadBuffer(bins_buffer, CL_TRUE, 0, BINS * sizeof(cl_float4), bins);
 
-        for(int i = 0; i < BINS; i ++) {
-            printf("(%2.2f,%2.2f,%2.2f,%2.2f)\n", 
-               bins[i].x, bins[i].y, bins[i].z, bins[i].w);
-        }
+        //for(int i = 0; i < BINS; i ++) {
+        //    printf("(%2.2f,%2.2f,%2.2f,%2.2f)\n", 
+        //       bins[i].x, bins[i].y, bins[i].z, bins[i].w);
+        //}
         return bins;
 
     } catch(cl::Error error) {
@@ -213,9 +213,9 @@ unsigned int* sortBins(cl::Context context, cl::CommandQueue queue, std::vector<
         unsigned int* sortedBins = new unsigned int[POINTS];
         queue.enqueueReadBuffer(bins_buffer, CL_TRUE, 0, arraySize, sortedBins);
 
-        for(unsigned int i = 0; i < POINTS; i++) {
-            printf("(%u)\n", sortedBins[i]);
-        }
+        //for(unsigned int i = 0; i < POINTS; i++) {
+        //    printf("(%u)\n", sortedBins[i]);
+        //}
         return sortedBins;
 
     } catch(cl::Error error) {
@@ -255,7 +255,7 @@ cl_float4* forces(cl::Context context, cl::CommandQueue queue, std::vector<cl::D
         cl::Buffer position_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, POINTS * sizeof(cl_float4));
         cl::Buffer cm_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, BINS * sizeof(cl_float4));
         cl::Buffer offsets_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, BINS*sizeof(unsigned int));
-        cl::Buffer bins_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, BINS*sizeof(unsigned int));
+        cl::Buffer bins_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, POINTS*sizeof(unsigned int));
         cl::Buffer forces_buffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, POINTS*sizeof(cl_float4));
 
         
