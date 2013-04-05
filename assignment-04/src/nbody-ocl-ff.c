@@ -81,13 +81,13 @@ cl_float4* computeBins(cl::Context& context,
     return bins;  
 }
 
-unsigned int* sortBins(cl::Context& context,
-                       cl::CommandQueue& queue,
-                       cl::Program& program,
-                       cl_float4* x,
-                       unsigned int* offsets)
+void sortBins(cl::Context& context,
+              cl::CommandQueue& queue,
+              cl::Program& program,
+              cl_float4* x,
+              unsigned int* offsets,
+              cl::Buffer* sorted_bins)
 {
-    int arraySize = POINTS*sizeof(unsigned int);
 
     // Make kernel
     cl::Kernel kernel(program, "sort");
@@ -97,9 +97,7 @@ unsigned int* sortBins(cl::Context& context,
     cl::Buffer position_buffer = 
       cl::Buffer(context, CL_MEM_READ_ONLY, POINTS * sizeof(cl_float4));
     cl::Buffer offsets_buffer = 
-      cl::Buffer(context, CL_MEM_READ_ONLY, BINS*sizeof(unsigned int));
-    cl::Buffer bins_buffer = 
-      cl::Buffer(context, CL_MEM_WRITE_ONLY, arraySize);
+      cl::Buffer(context, CL_MEM_READ_ONLY, BINS * sizeof(unsigned int));
 
     // Copy lists the memory buffers
     queue.enqueueWriteBuffer(position_buffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), x);
@@ -108,17 +106,12 @@ unsigned int* sortBins(cl::Context& context,
     // Set arguments to kernel
     kernel.setArg(0, position_buffer);
     kernel.setArg(1, offsets_buffer);
-    kernel.setArg(2, bins_buffer);
+    kernel.setArg(2, *sorted_bins);
 
     // Run the kernel on specific ND range
     cl::NDRange global(BINS);
     queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, cl::NullRange);
-
-    // Read buffer C into a local list
-    unsigned int* sortedBins = new unsigned int[POINTS];
-    queue.enqueueReadBuffer(bins_buffer, CL_TRUE, 0, arraySize, sortedBins);
-
-    return sortedBins;
+    
 }
 
 
@@ -128,7 +121,7 @@ cl_float4* forces(cl::Context& context,
                   cl_float4* x,
                   cl_float4* cm,
                   unsigned int* offsets,
-                  unsigned int* bins)
+                  cl::Buffer* bins_buffer)
 {
     cl::Kernel kernel(program, "forces");
 
@@ -137,20 +130,18 @@ cl_float4* forces(cl::Context& context,
       cl::Buffer(context, CL_MEM_READ_ONLY, POINTS * sizeof(cl_float4));
     cl::Buffer cm_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, BINS * sizeof(cl_float4));
     cl::Buffer offsets_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, BINS*sizeof(unsigned int));
-    cl::Buffer bins_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, POINTS*sizeof(unsigned int));
     cl::Buffer forces_buffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, POINTS*sizeof(cl_float4));
     
     // Copy lists the memory buffers
     queue.enqueueWriteBuffer(position_buffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), x);
     queue.enqueueWriteBuffer(cm_buffer, CL_TRUE, 0, BINS * sizeof(cl_float4), cm);
     queue.enqueueWriteBuffer(offsets_buffer, CL_TRUE, 0, BINS * sizeof(unsigned int), offsets);
-    queue.enqueueWriteBuffer(bins_buffer, CL_TRUE, 0, POINTS * sizeof(unsigned int), bins);
     
     // Set arguments to kernel
     kernel.setArg(0, position_buffer);
     kernel.setArg(1, cm_buffer);
     kernel.setArg(2, offsets_buffer);
-    kernel.setArg(3, bins_buffer);
+    kernel.setArg(3, *bins_buffer);
     kernel.setArg(4, forces_buffer);
 
     // Run the kernel on specific ND range
@@ -219,8 +210,11 @@ int main(int argc, char ** argv)
         offsets[i] = offsets[i-1] + cm[i-1].w;
     }
 
-    unsigned int* sortedBins = sortBins(context, queue, program, x, offsets);
-    cl_float4* a = forces(context, queue, program, x, cm, offsets, sortedBins);
+    cl::Buffer sortedBins = 
+      cl::Buffer(context, CL_MEM_READ_WRITE, POINTS * sizeof(unsigned int));
+
+    sortBins(context, queue, program, x, offsets, &sortedBins);
+    cl_float4* a = forces(context, queue, program, x, cm, offsets, &sortedBins);
 
     for(int i = 0; i < POINTS; i++){
         printf("(%2.2f,%2.2f,%2.2f,%2.2f) (%2.3f,%2.3f,%2.3f)\n", 
