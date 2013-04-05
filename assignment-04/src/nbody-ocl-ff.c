@@ -140,7 +140,7 @@ cl_float4* computeBins(cl::Context context, cl::CommandQueue queue, std::vector<
         kernel.setArg(BUCKETS, bins_buffer);
 
         // Run the kernel on specific ND range
-        cl::NDRange global(POINTS);
+        cl::NDRange global(BINS);
         cl::NDRange local(1);
         queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, cl::NullRange);
 
@@ -190,12 +190,12 @@ unsigned int* sortBins(cl::Context context, cl::CommandQueue queue, std::vector<
         // Create memory buffers
 
         cl::Buffer position_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, POINTS * sizeof(cl_float4));
-        cl::Buffer offsets_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, BINS*sizeof(int));
+        cl::Buffer offsets_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, BINS*sizeof(unsigned int));
         cl::Buffer bins_buffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, arraySize);
 
         // Copy lists the memory buffers
         queue.enqueueWriteBuffer(position_buffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), x);
-        queue.enqueueWriteBuffer(offsets_buffer, CL_TRUE, 0, BINS * sizeof(int), offsets);
+        queue.enqueueWriteBuffer(offsets_buffer, CL_TRUE, 0, BINS * sizeof(unsigned int), offsets);
         
         // Set arguments to kernel
         //int buffer_size = POINTS;
@@ -210,11 +210,11 @@ unsigned int* sortBins(cl::Context context, cl::CommandQueue queue, std::vector<
         queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, cl::NullRange);
 
         // Read buffer C into a local list
-        unsigned int* sortedBins = new unsigned int[arraySize];
+        unsigned int* sortedBins = new unsigned int[POINTS];
         queue.enqueueReadBuffer(bins_buffer, CL_TRUE, 0, arraySize, sortedBins);
 
-        for(unsigned int i = 0; i < (arraySize/sizeof(unsigned int)); i++) {
-            printf("(%d)\n", sortedBins[i]);
+        for(unsigned int i = 0; i < POINTS; i++) {
+            printf("(%u)\n", sortedBins[i]);
         }
         return sortedBins;
 
