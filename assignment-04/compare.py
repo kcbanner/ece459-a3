@@ -30,14 +30,17 @@ while True:
 
     if a_pos != b_pos:
         print "position mismatch: %s vs %s" % (a_pos, b_pos)
-        continue
+        break
 
-    split = a_accel[1:-1].split(',')
+    split = a_accel[1:-2].split(',')
     a_accel = (split[0], split[1], split[2])    
-    split = b_accel[1:-1].split(',')
+    split = b_accel[1:-2].split(',')
     b_accel = (split[0], split[1], split[2])
     
     if a_accel != b_accel:
-        print "accel mismatch: %s %s vs %s %s" % (a_pos, a_accel, b_pos, b_accel)
+        print "(%s, %s, %s, %s) (%s, %s, %s)" % (a_pos[0], a_pos[1], a_pos[2], a_pos[3],
+                                                 float(a_accel[0]) - float(b_accel[0]),
+                                                 float(a_accel[1]) - float(b_accel[1]),
+                                                 float(a_accel[2]) - float(b_accel[2]))
 
     
