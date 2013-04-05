@@ -195,7 +195,7 @@ int main(int argc, char ** argv)
     
     cl::Buffer pointsBuffer = 
       cl::Buffer(context, CL_MEM_READ_ONLY, POINTS * sizeof(cl_float4));
-    cl::Buffer cmBuffer =  cl::Buffer(context, CL_MEM_WRITE_ONLY, BINS * sizeof(cl_float4));
+    cl::Buffer cmBuffer =  cl::Buffer(context, CL_MEM_READ_WRITE, BINS * sizeof(cl_float4));
     cl::Buffer binsBuffer = 
       cl::Buffer(context, CL_MEM_READ_WRITE, POINTS * sizeof(unsigned int));
     cl::Buffer offsetsBuffer = 
