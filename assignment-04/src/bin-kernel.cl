@@ -1,20 +1,18 @@
 #define BIN_SIZE 100
+#define POINTS 500*64
 
 __kernel void bin(global const float4* points, global float4* cm) {
     int i;
     int id;
-    int size;
     float3 bin;
     float4 point;
     
     id = get_global_id(0);
-    size = get_global_size(0);
-
     bin = (float3)(id % BIN_SIZE,
                    (id / BIN_SIZE) % BIN_SIZE,
                    (id / (BIN_SIZE*BIN_SIZE)) % BIN_SIZE);
 
-    for (i = 0; i < size; i++) {
+    for (i = 0; i < POINTS; i++) {
         point = points[i];
 
         if ((point.x >= bin.x && point.x < (bin.x + BIN_SIZE)) && 

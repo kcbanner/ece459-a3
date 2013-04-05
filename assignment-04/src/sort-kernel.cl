@@ -1,4 +1,5 @@
 #define BIN_SIZE 100
+#define POINTS 500*64
 
 __kernel void sort(global const float4* points,
                    global const unsigned int* offsets,
@@ -6,21 +7,18 @@ __kernel void sort(global const float4* points,
     int i;
     int j;
     int id;
-    int size;
     int offset;
     float3 bin;
     float4 point;
     
     id = get_global_id(0);
-    size = get_global_size(0);
-
     bin = (float3)(id % BIN_SIZE,
                    (id / BIN_SIZE) % BIN_SIZE,
                    (id / (BIN_SIZE*BIN_SIZE)) % BIN_SIZE);
 
     j = 0;
     offset = offsets[id];
-    for (i = 0; i < size; i++) {
+    for (i = 0; i < POINTS; i++) {
         point = points[i];
 
         if ((point.x >= bin.x && point.x < (bin.x + BIN_SIZE)) && 
