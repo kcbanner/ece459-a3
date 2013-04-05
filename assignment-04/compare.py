@@ -8,6 +8,7 @@ if len(sys.argv) < 3:
 
 a = open(sys.argv[1], 'r')
 b = open(sys.argv[2], 'r')
+max_delta = 0.0
 
 while True:
     a_line = a.readline()
@@ -37,10 +38,22 @@ while True:
     split = b_accel[1:-2].split(',')
     b_accel = (split[0], split[1], split[2])
     
+    deltas = (
+        float(a_accel[0]) - float(b_accel[0]),
+        float(a_accel[1]) - float(b_accel[1]),
+        float(a_accel[2]) - float(b_accel[2]))
+
+    for delta in deltas:
+        if abs(delta) > max_delta:
+            max_delta = abs(delta)
+
     if a_accel != b_accel:
         print "(%s, %s, %s, %s) (%s, %s, %s)" % (a_pos[0], a_pos[1], a_pos[2], a_pos[3],
-                                                 float(a_accel[0]) - float(b_accel[0]),
-                                                 float(a_accel[1]) - float(b_accel[1]),
-                                                 float(a_accel[2]) - float(b_accel[2]))
+                                                 deltas[0],
+                                                 deltas[1],
+                                                 deltas[2])
 
+print "Largest delta: %f" % max_delta 
+
+    
     
