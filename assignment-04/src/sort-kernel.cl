@@ -1,6 +1,8 @@
 #define BIN_SIZE 100
 
-__kernel void sort(global const float4* points, global const int* offsets, global int* bins) {
+__kernel void sort(global const float4* points,
+                   global const unsigned int* offsets,
+                   global unsigned int* bins) {
     int i;
     int j;
     int id;
