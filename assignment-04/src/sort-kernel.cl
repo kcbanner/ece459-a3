@@ -1,3 +1,4 @@
+#define NUM_BINS 10
 #define BIN_SIZE 100
 #define POINTS 500*64
 
@@ -12,9 +13,9 @@ __kernel void sort(global const float4* points,
     float4 point;
     
     id = get_global_id(0);
-    bin = (float3)(id % BIN_SIZE,
-                   (id / BIN_SIZE) % BIN_SIZE,
-                   (id / (BIN_SIZE*BIN_SIZE)) % BIN_SIZE);
+    bin = (float3)(id % NUM_BINS * BIN_SIZE,
+                   (id / NUM_BINS) % NUM_BINS * BIN_SIZE,
+                   (id / (NUM_BINS*NUM_BINS)) % NUM_BINS * BIN_SIZE);
 
     j = 0;
     offset = offsets[id];
