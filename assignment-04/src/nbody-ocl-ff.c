@@ -172,9 +172,9 @@ cl_float4* computeBins(cl::Context context, cl::CommandQueue queue, std::vector<
 }
 
 unsigned int* sortBins(cl::Context context, cl::CommandQueue queue, std::vector<cl::Device>& devices, std::string sourceCode,
-                    cl_float4* x, int* offsets, int arraySize)
+                    cl_float4* x, int* offsets)
 {
-
+        int arraySize = POINTS*sizeof(unsigned int);
         cl::Program::Sources source(1, std::make_pair(sourceCode.c_str(), sourceCode.length()+1));
 
         // Make program of the source code in the context
@@ -190,7 +190,7 @@ unsigned int* sortBins(cl::Context context, cl::CommandQueue queue, std::vector<
         // Create memory buffers
 
         cl::Buffer position_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, POINTS * sizeof(cl_float4));
-        cl::Buffer offsets_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, arraySize);
+        cl::Buffer offsets_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, BINS*sizeof(int));
         cl::Buffer bins_buffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, arraySize);
 
         // Copy lists the memory buffers
@@ -273,7 +273,7 @@ int main(int argc, char ** argv)
         offsets[i] = offsets[i-1] + bins[i-1].w;
     }
 
-    sortBins(context, queue, devices, *sort_source, x, offsets, BINS*cumsum*sizeof(int));
+    sortBins(context, queue, devices, *sort_source, x, offsets);
 
     free(x);
     return 0;
