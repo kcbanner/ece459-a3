@@ -64,6 +64,24 @@ __kernel void bin(global const float4* points, global float4* cm) {
 
 // Iterating once per bin
 
+__kernel void offsets(global const float4* cm, global unsigned int* offsets) {
+    int i;
+    int id;
+    int acc;
+
+    id = get_global_id(0);
+    acc = 0;
+    for (i = 1; i < (id + 1); i++) {
+        acc += cm[i - 1].w;
+    }    
+    
+    offsets[id] = acc;
+}
+
+
+
+// Iterating once per bin
+
 __kernel void sort(global const float4* points,
                    global const unsigned int* offsets,
                    global unsigned int* bins) {

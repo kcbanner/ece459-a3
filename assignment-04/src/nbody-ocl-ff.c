@@ -49,7 +49,6 @@ std::string* loadKernelSource(std::string source) {
   return contents;
 }
 
-
 void computeBins(cl::Context& context,
                  cl::CommandQueue& queue,
                  cl::Program& program,
@@ -94,6 +93,25 @@ void sortBins(cl::Context& context,
     
 }
 
+void genOffsets(cl::Context& context,
+                cl::CommandQueue& queue,
+                cl::Program& program,
+                cl::Buffer* cm_buffer,
+                cl::Buffer* offsets_buffer)
+{
+
+    // Make kernel
+    cl::Kernel kernel(program, "offsets");
+    
+    // Set arguments to kernel
+    kernel.setArg(0, *cm_buffer);
+    kernel.setArg(1, *offsets_buffer);
+
+    // Run the kernel on specific ND range
+    cl::NDRange global(BINS);
+    queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, cl::NullRange);
+
+}
 
 cl_float4* forces(cl::Context& context,
                   cl::CommandQueue& queue,
@@ -181,25 +199,16 @@ int main(int argc, char ** argv)
     cl::Buffer binsBuffer = 
       cl::Buffer(context, CL_MEM_READ_WRITE, POINTS * sizeof(unsigned int));
     cl::Buffer offsetsBuffer = 
-      cl::Buffer(context, CL_MEM_READ_ONLY, BINS * sizeof(unsigned int));
-    cl_float4* cm = new cl_float4[BINS];
-    unsigned int* offsets = (unsigned int*) malloc(sizeof(int)*BINS);
+      cl::Buffer(context, CL_MEM_READ_WRITE, BINS * sizeof(unsigned int));
 
     // Upload points to GPU and compute the centers of mass
 
     queue.enqueueWriteBuffer(pointsBuffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), x);
     computeBins(context, queue, program, &pointsBuffer, &cmBuffer);
 
-    // Get the centers of mass from the GPU and compute offsets, then upload
-    // the offsets to GPU
+    // Generate bin offsets
 
-    queue.enqueueReadBuffer(cmBuffer, CL_TRUE, 0, BINS * sizeof(cl_float4), cm);
-    offsets[0] = 0;
-    for(int i =1; i < BINS; i++) {
-        offsets[i] = offsets[i-1] + cm[i-1].w;
-    }
-
-    queue.enqueueWriteBuffer(offsetsBuffer, CL_TRUE, 0, BINS * sizeof(unsigned int), offsets);
+    genOffsets(context, queue, program, &cmBuffer, &offsetsBuffer);
 
     // Sort the bins, and then compute all forces
 
