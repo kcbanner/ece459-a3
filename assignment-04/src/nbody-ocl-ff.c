@@ -171,7 +171,7 @@ cl_float4* computeBins(cl::Context context, cl::CommandQueue queue, std::vector<
     
 }
 
-int* sortBins(cl::Context context, cl::CommandQueue queue, std::vector<cl::Device>& devices, std::string sourceCode,
+unsigned int* sortBins(cl::Context context, cl::CommandQueue queue, std::vector<cl::Device>& devices, std::string sourceCode,
                     cl_float4* x, int* offsets, int arraySize)
 {
 
@@ -210,10 +210,10 @@ int* sortBins(cl::Context context, cl::CommandQueue queue, std::vector<cl::Devic
         queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, cl::NullRange);
 
         // Read buffer C into a local list
-        int* sortedBins = new int[arraySize];
-        queue.enqueueReadBuffer(bins_buffer, CL_TRUE, 0, BINS * sizeof(cl_float4), sortedBins);
+        unsigned int* sortedBins = new unsigned int[arraySize];
+        queue.enqueueReadBuffer(bins_buffer, CL_TRUE, 0, arraySize, sortedBins);
 
-        for(int i = 0; i < arraySize; i ++) {
+        for(unsigned int i = 0; i < (arraySize/sizeof(unsigned int)); i++) {
             printf("(%d)\n", sortedBins[i]);
         }
         return sortedBins;
