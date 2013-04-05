@@ -7,7 +7,7 @@
 \pagestyle{empty}
 
 \title{ECE 459: Programming for Performance\\Assignment 4}
-\author{Group Members}
+\author{Casey Banner and Stephan van den Heuvel}
 \date{April 8, 2013}
 
 % Code listing style
@@ -17,13 +17,40 @@
 
 \maketitle
 
-\begin{lstlisting}
-#include <iostream>
+\section{Design Decisions}
+%%TODO: be brief, no more than half a page. This is for part 2 only.
 
-int main(int argc, char *argv[])
-{
-    std::cout << "Example code listing" << std::endl;
-}
-\end{lstlisting}
+\section{Results}
+
+The performance of the naive OpenCL implementation is given in Table~\ref{tbl-naive-bench}.
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{lr}
+    & {\bf Time (s)} \\
+    \hline
+    Run 1 & 0.176 \\
+    Run 2 & 0.170 \\
+    Run 3 & 0.164 \\
+    Run 4 & 0.172 \\
+    Run 5 & 0.169 \\
+    \hline
+    Average & 0.170 \\
+  \end{tabular}
+  \caption{Benchmark results for naive OpenCL Implementation}
+  \label{tbl-naive-bench}
+\end{table}
+
+%%TODO: results of the 'optimizaed' OpenCL implementation
+
+%sample code listing by P. Lam
+%\begin{lstlisting}
+%#include <iostream>
+
+%int main(int argc, char *argv[])
+%{
+%    std::cout << "Example code listing" << std::endl;
+%}
+%\end{lstlisting}
 
 \end{document}
