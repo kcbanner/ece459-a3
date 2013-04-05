@@ -49,265 +49,121 @@ std::string* loadKernelSource(std::string source) {
   return contents;
 }
 
-void runKernel(cl::Context context, cl::CommandQueue queue, std::vector<cl::Device>& devices, std::string sourceCode, cl_float4* x)
+
+cl_float4* computeBins(cl::Context& context, cl::CommandQueue& queue, cl::Program& program, cl_float4* x)
 {
 
-        cl::Program::Sources source(1, std::make_pair(sourceCode.c_str(), sourceCode.length()+1));
+    // Make kernel
+    cl::Kernel kernel(program, "bin");
 
-        // Make program of the source code in the context
-        cl::Program program = cl::Program(context, source);
+    // Create memory buffers
+    cl::Buffer position_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, POINTS * sizeof(cl_float4));
+    cl::Buffer bins_buffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, BINS * sizeof(cl_float4));
 
-        // Build program for these specific devices
-    try{
-        program.build(devices);
-
-        // Make kernel
-        cl::Kernel kernel(program, "nbody");
-
-        // Create memory buffers
-
-        cl::Buffer position_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, POINTS * sizeof(cl_float4));
-        cl::Buffer accelleration_buffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, POINTS * sizeof(cl_float4));
-
-        // Copy lists the memory buffers
-        queue.enqueueWriteBuffer(position_buffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), x);
-        
-        // Set arguments to kernel
-        //int buffer_size = POINTS;
-        //kernel.setArg(BUFFER_SIZE, buffer_size);
-        kernel.setArg(POSITION_BUFFER, position_buffer);
-        kernel.setArg(ACCELLERATION_BUFFER, accelleration_buffer);
-
-        // Run the kernel on specific ND range
-        cl::NDRange global(POINTS);
-        cl::NDRange local(1);
-        queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, cl::NullRange);
-
-        // Read buffer C into a local list
-        cl_float4* new_a = new cl_float4[POINTS];
-        queue.enqueueReadBuffer(accelleration_buffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), new_a);
-
-        for(int i = 0; i < POINTS; i ++) {
-            printf("(%2.2f,%2.2f,%2.2f,%2.2f) (%2.3f,%2.3f,%2.3f)\n", 
-               x[i].x, x[i].y, x[i].z, x[i].w,
-               new_a[i].x, new_a[i].y, new_a[i].z);
-        }
-        delete[] new_a;
-
-    } catch(cl::Error error) {
-        std::cout << error.what() << "(" << error.err() << ")" << std::endl;
-
-        std::string build_log;
-        build_log = program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(devices[0]);
-        std::cout << "Build status: " << build_log << std::endl;
-
-        build_log = program.getBuildInfo<CL_PROGRAM_BUILD_OPTIONS>(devices[0]);
-        std::cout << "Build options: " << build_log << std::endl;
-
-        build_log = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]);
-        std::cout << "Build log: " << build_log << std::endl;
-    }
+    // Copy lists the memory buffers
+    queue.enqueueWriteBuffer(position_buffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), x);
     
+    // Set arguments to kernel
+    //int buffer_size = POINTS;
+    //kernel.setArg(BUFFER_SIZE, buffer_size);
+    kernel.setArg(POSITION_BUFFER, position_buffer);
+    kernel.setArg(BUCKETS, bins_buffer);
+
+    // Run the kernel on specific ND range
+    cl::NDRange global(BINS);
+    cl::NDRange local(1);
+    queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, cl::NullRange);
+
+    // Read buffer C into a local list
+    cl_float4* bins = new cl_float4[BINS];
+    queue.enqueueReadBuffer(bins_buffer, CL_TRUE, 0, BINS * sizeof(cl_float4), bins);
+
+    return bins;  
 }
 
-cl_float4* computeBins(cl::Context context, cl::CommandQueue queue, std::vector<cl::Device>& devices, std::string sourceCode, cl_float4* x)
-{
-
-        cl::Program::Sources source(1, std::make_pair(sourceCode.c_str(), sourceCode.length()+1));
-
-        // Make program of the source code in the context
-        cl::Program program = cl::Program(context, source);
-
-        // Build program for these specific devices
-    try{
-        program.build(devices);
-
-        // Make kernel
-        cl::Kernel kernel(program, "bin");
-
-        // Create memory buffers
-
-        cl::Buffer position_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, POINTS * sizeof(cl_float4));
-        cl::Buffer bins_buffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, BINS * sizeof(cl_float4));
-
-        // Copy lists the memory buffers
-        queue.enqueueWriteBuffer(position_buffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), x);
-        
-        // Set arguments to kernel
-        //int buffer_size = POINTS;
-        //kernel.setArg(BUFFER_SIZE, buffer_size);
-        kernel.setArg(POSITION_BUFFER, position_buffer);
-        kernel.setArg(BUCKETS, bins_buffer);
-
-        // Run the kernel on specific ND range
-        cl::NDRange global(BINS);
-        cl::NDRange local(1);
-        queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, cl::NullRange);
-
-        // Read buffer C into a local list
-        cl_float4* bins = new cl_float4[BINS];
-        queue.enqueueReadBuffer(bins_buffer, CL_TRUE, 0, BINS * sizeof(cl_float4), bins);
-
-        //for(int i = 0; i < BINS; i ++) {
-        //    printf("(%2.2f,%2.2f,%2.2f,%2.2f)\n", 
-        //       bins[i].x, bins[i].y, bins[i].z, bins[i].w);
-        //}
-        return bins;
-
-    } catch(cl::Error error) {
-        std::cout << error.what() << "(" << error.err() << ")" << std::endl;
-
-        std::string build_log;
-        build_log = program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(devices[0]);
-        std::cout << "Build status: " << build_log << std::endl;
-
-        build_log = program.getBuildInfo<CL_PROGRAM_BUILD_OPTIONS>(devices[0]);
-        std::cout << "Build options: " << build_log << std::endl;
-
-        build_log = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]);
-        std::cout << "Build log: " << build_log << std::endl;
-    }
-    return NULL;
-    
-}
-
-unsigned int* sortBins(cl::Context context, cl::CommandQueue queue, std::vector<cl::Device>& devices, std::string sourceCode,
+unsigned int* sortBins(cl::Context& context, cl::CommandQueue& queue, cl::Program& program,
                     cl_float4* x, unsigned int* offsets)
 {
-        int arraySize = POINTS*sizeof(unsigned int);
-        cl::Program::Sources source(1, std::make_pair(sourceCode.c_str(), sourceCode.length()+1));
+    int arraySize = POINTS*sizeof(unsigned int);
 
-        // Make program of the source code in the context
-        cl::Program program = cl::Program(context, source);
+    // Make kernel
+    cl::Kernel kernel(program, "sort");
 
-        // Build program for these specific devices
-    try{
-        program.build(devices);
+    // Create memory buffers
 
-        // Make kernel
-        cl::Kernel kernel(program, "sort");
+    cl::Buffer position_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, POINTS * sizeof(cl_float4));
+    cl::Buffer offsets_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, BINS*sizeof(unsigned int));
+    cl::Buffer bins_buffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, arraySize);
 
-        // Create memory buffers
+    // Copy lists the memory buffers
+    queue.enqueueWriteBuffer(position_buffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), x);
+    queue.enqueueWriteBuffer(offsets_buffer, CL_TRUE, 0, BINS * sizeof(unsigned int), offsets);
+    
+    // Set arguments to kernel
+    kernel.setArg(0, position_buffer);
+    kernel.setArg(1, offsets_buffer);
+    kernel.setArg(2, bins_buffer);
 
-        cl::Buffer position_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, POINTS * sizeof(cl_float4));
-        cl::Buffer offsets_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, BINS*sizeof(unsigned int));
-        cl::Buffer bins_buffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, arraySize);
+    // Run the kernel on specific ND range
+    cl::NDRange global(BINS);
+    cl::NDRange local(1);
+    queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, cl::NullRange);
 
-        // Copy lists the memory buffers
-        queue.enqueueWriteBuffer(position_buffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), x);
-        queue.enqueueWriteBuffer(offsets_buffer, CL_TRUE, 0, BINS * sizeof(unsigned int), offsets);
-        
-        // Set arguments to kernel
-        //int buffer_size = POINTS;
-        //kernel.setArg(BUFFER_SIZE, buffer_size);
-        kernel.setArg(0, position_buffer);
-        kernel.setArg(1, offsets_buffer);
-        kernel.setArg(2, bins_buffer);
+    // Read buffer C into a local list
+    unsigned int* sortedBins = new unsigned int[POINTS];
+    queue.enqueueReadBuffer(bins_buffer, CL_TRUE, 0, arraySize, sortedBins);
 
-        // Run the kernel on specific ND range
-        cl::NDRange global(BINS);
-        cl::NDRange local(1);
-        queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, cl::NullRange);
-
-        // Read buffer C into a local list
-        unsigned int* sortedBins = new unsigned int[POINTS];
-        queue.enqueueReadBuffer(bins_buffer, CL_TRUE, 0, arraySize, sortedBins);
-
-        //for(unsigned int i = 0; i < POINTS; i++) {
-        //    printf("(%u)\n", sortedBins[i]);
-        //}
-        return sortedBins;
-
-    } catch(cl::Error error) {
-        std::cout << error.what() << "(" << error.err() << ")" << std::endl;
-
-        std::string build_log;
-        build_log = program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(devices[0]);
-        std::cout << "Build status: " << build_log << std::endl;
-
-        build_log = program.getBuildInfo<CL_PROGRAM_BUILD_OPTIONS>(devices[0]);
-        std::cout << "Build options: " << build_log << std::endl;
-
-        build_log = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]);
-        std::cout << "Build log: " << build_log << std::endl;
-    }
-    return NULL;
+    return sortedBins;
 }
 
 
-cl_float4* forces(cl::Context context, cl::CommandQueue queue, std::vector<cl::Device>& devices, std::string sourceCode,
+cl_float4* forces(cl::Context& context, cl::CommandQueue& queue, cl::Program& program,
                     cl_float4* x, cl_float4* cm, unsigned int* offsets, unsigned int* bins)
 {
-        cl::Program::Sources source(1, std::make_pair(sourceCode.c_str(), sourceCode.length()+1));
+    cl::Kernel kernel(program, "forces");
 
-        // Make program of the source code in the context
-        cl::Program program = cl::Program(context, source);
+    // Create memory buffers
 
-        // Build program for these specific devices
-    try{
-        program.build(devices);
+    cl::Buffer position_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, POINTS * sizeof(cl_float4));
+    cl::Buffer cm_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, BINS * sizeof(cl_float4));
+    cl::Buffer offsets_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, BINS*sizeof(unsigned int));
+    cl::Buffer bins_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, POINTS*sizeof(unsigned int));
+    cl::Buffer forces_buffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, POINTS*sizeof(cl_float4));
 
-        // Make kernel
-        cl::Kernel kernel(program, "forces");
+    
+    // Copy lists the memory buffers
+    queue.enqueueWriteBuffer(position_buffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), x);
+    queue.enqueueWriteBuffer(cm_buffer, CL_TRUE, 0, BINS * sizeof(cl_float4), cm);
+    queue.enqueueWriteBuffer(offsets_buffer, CL_TRUE, 0, BINS * sizeof(unsigned int), offsets);
+    queue.enqueueWriteBuffer(bins_buffer, CL_TRUE, 0, POINTS * sizeof(unsigned int), bins);
+    
+    // Set arguments to kernel
+    //int buffer_size = POINTS;
+    //kernel.setArg(BUFFER_SIZE, buffer_size);
+    kernel.setArg(0, position_buffer);
+    kernel.setArg(1, cm_buffer);
+    kernel.setArg(2, offsets_buffer);
+    kernel.setArg(3, bins_buffer);
+    kernel.setArg(4, forces_buffer);
 
-        // Create memory buffers
+    // Run the kernel on specific ND range
+    cl::NDRange global(POINTS);
+    cl::NDRange local(1);
+    queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, cl::NullRange);
 
-        cl::Buffer position_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, POINTS * sizeof(cl_float4));
-        cl::Buffer cm_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, BINS * sizeof(cl_float4));
-        cl::Buffer offsets_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, BINS*sizeof(unsigned int));
-        cl::Buffer bins_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, POINTS*sizeof(unsigned int));
-        cl::Buffer forces_buffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, POINTS*sizeof(cl_float4));
+    // Read buffer C into a local list
+    cl_float4* forces = new cl_float4[POINTS];
+    queue.enqueueReadBuffer(forces_buffer, CL_TRUE, 0, POINTS*sizeof(cl_float4), forces);
 
-        
-        // Copy lists the memory buffers
-        queue.enqueueWriteBuffer(position_buffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), x);
-        queue.enqueueWriteBuffer(cm_buffer, CL_TRUE, 0, BINS * sizeof(cl_float4), cm);
-        queue.enqueueWriteBuffer(offsets_buffer, CL_TRUE, 0, BINS * sizeof(unsigned int), offsets);
-        queue.enqueueWriteBuffer(bins_buffer, CL_TRUE, 0, POINTS * sizeof(unsigned int), bins);
-        
-        // Set arguments to kernel
-        //int buffer_size = POINTS;
-        //kernel.setArg(BUFFER_SIZE, buffer_size);
-        kernel.setArg(0, position_buffer);
-        kernel.setArg(1, cm_buffer);
-        kernel.setArg(2, offsets_buffer);
-        kernel.setArg(3, bins_buffer);
-        kernel.setArg(4, forces_buffer);
-
-        // Run the kernel on specific ND range
-        cl::NDRange global(POINTS);
-        cl::NDRange local(1);
-        queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, cl::NullRange);
-
-        // Read buffer C into a local list
-        cl_float4* forces = new cl_float4[POINTS];
-        queue.enqueueReadBuffer(forces_buffer, CL_TRUE, 0, POINTS*sizeof(cl_float4), forces);
-
-        return forces;
-
-    } catch(cl::Error error) {
-        std::cout << error.what() << "(" << error.err() << ")" << std::endl;
-
-        std::string build_log;
-        build_log = program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(devices[0]);
-        std::cout << "Build status: " << build_log << std::endl;
-
-        build_log = program.getBuildInfo<CL_PROGRAM_BUILD_OPTIONS>(devices[0]);
-        std::cout << "Build options: " << build_log << std::endl;
-
-        build_log = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]);
-        std::cout << "Build log: " << build_log << std::endl;
-    }
-    return NULL;
+    return forces;
 }
 
 int main(int argc, char ** argv)
 {
     cl_float4 * x = initializePositions();
 
-    std::string* bin_source = loadKernelSource("src/bin-kernel.cl");
-    std::string* sort_source = loadKernelSource("src/sort-kernel.cl");
-    std::string* forces_source = loadKernelSource("src/forces-kernel.cl");
+    std::string* source = loadKernelSource("src/kernel.cl");
+
     // Get available platforms
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
@@ -326,8 +182,33 @@ int main(int argc, char ** argv)
     // Create a command queue and use the first device
     cl::CommandQueue queue = cl::CommandQueue(context, devices[0]);
 
+    cl::Program::Sources sources(1, std::make_pair(source->c_str(), source->length()+1));
+
+    // Make program of the source code in the context
+    cl::Program program = cl::Program(context, sources);
+
+    // Build program for these specific devices
+    try{
+        program.build(devices);
+
+    } catch(cl::Error error) {
+        std::cout << error.what() << "(" << error.err() << ")" << std::endl;
+
+        std::string build_log;
+        build_log = program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(devices[0]);
+        std::cout << "Build status: " << build_log << std::endl;
+
+        build_log = program.getBuildInfo<CL_PROGRAM_BUILD_OPTIONS>(devices[0]);
+        std::cout << "Build options: " << build_log << std::endl;
+
+        build_log = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]);
+        std::cout << "Build log: " << build_log << std::endl;
+        exit(0);
+    }
+
+
     //runKernel(context, queue, devices, *source, x);
-    cl_float4* cm = computeBins(context, queue, devices, *bin_source, x);
+    cl_float4* cm = computeBins(context, queue, program, x);
     int cumsum = 0;
     for(int i = 0; i < BINS; i++) {
         cumsum += (int) cm[i].w;
@@ -340,8 +221,8 @@ int main(int argc, char ** argv)
         offsets[i] = offsets[i-1] + cm[i-1].w;
     }
 
-    unsigned int* sortedBins = sortBins(context, queue, devices, *sort_source, x, offsets);
-    cl_float4* a = forces(context, queue, devices, *forces_source, x, cm, offsets, sortedBins);
+    unsigned int* sortedBins = sortBins(context, queue, program, x, offsets);
+    cl_float4* a = forces(context, queue, program, x, cm, offsets, sortedBins);
 
     for(int i = 0; i < POINTS; i++){
         printf("(%2.2f,%2.2f,%2.2f,%2.2f) (%2.3f,%2.3f,%2.3f)\n", 
