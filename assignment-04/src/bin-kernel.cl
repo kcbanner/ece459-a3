@@ -7,17 +7,15 @@ __kernel void bin(global const float4* points, global float4* cm) {
     int id;
     float3 bin;
     float4 point;
+    float4 centerMass;
     
     id = get_global_id(0);
     bin = (float3)(id % NUM_BINS * BIN_SIZE,
                    (id / NUM_BINS) % NUM_BINS * BIN_SIZE,
                    (id / (NUM_BINS*NUM_BINS)) % NUM_BINS * BIN_SIZE);
 
-    cm[id].x = 0.0f;
-    cm[id].y = 0.0f;
-    cm[id].z = 0.0f;
-    cm[id].w = 0.0f;
 
+    centerMass = (float4)(0.0f, 0.0f, 0.0f, 0.0f);
     for (i = 0; i < POINTS; i++) {
         point = points[i];
 
@@ -27,14 +25,15 @@ __kernel void bin(global const float4* points, global float4* cm) {
 
             // The point is within this bin
 
-            cm[id].x += point.x;
-            cm[id].y += point.y;
-            cm[id].z += point.z;
-            cm[id].w += 1.0f;         
+            centerMass.x += point.x;
+            centerMass.y += point.y;
+            centerMass.z += point.z;
+            centerMass.w += 1.0f;         
         }
     }
 
-    cm[id].x /= cm[id].w;
-    cm[id].y /= cm[id].w;
-    cm[id].z /= cm[id].w;
+    centerMass.x /= centerMass.w;
+    centerMass.y /= centerMass.w;
+    centerMass.z /= centerMass.w;
+    cm[id] = centerMass;
 };
