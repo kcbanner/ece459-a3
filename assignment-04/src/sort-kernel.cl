@@ -15,7 +15,7 @@ __kernel void sort(global const float4* points, global const int* offsets, globa
                    (id / BIN_SIZE) % BIN_SIZE,
                    (id / (BIN_SIZE*BIN_SIZE)) % BIN_SIZE);
 
-    int j = 0;
+    j = 0;
     for (i = 0; i < size; i++) {
         point = points[i];
 
