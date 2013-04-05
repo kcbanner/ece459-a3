@@ -7,6 +7,7 @@ __kernel void sort(global const float4* points,
     int j;
     int id;
     int size;
+    int offset;
     float3 bin;
     float4 point;
     
@@ -18,6 +19,7 @@ __kernel void sort(global const float4* points,
                    (id / (BIN_SIZE*BIN_SIZE)) % BIN_SIZE);
 
     j = 0;
+    offset = offsets[id];
     for (i = 0; i < size; i++) {
         point = points[i];
 
@@ -27,7 +29,7 @@ __kernel void sort(global const float4* points,
 
             // The point is within this bin
             
-            bins[offsets[id] + j] = i;
+            bins[offset + j] = i;
             j++;
 
         }
