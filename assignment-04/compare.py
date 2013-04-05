@@ -9,6 +9,8 @@ if len(sys.argv) < 3:
 a = open(sys.argv[1], 'r')
 b = open(sys.argv[2], 'r')
 max_delta = 0.0
+total_error = 0.0
+lines = 0
 
 while True:
     a_line = a.readline()
@@ -47,13 +49,20 @@ while True:
         if abs(delta) > max_delta:
             max_delta = abs(delta)
 
+        total_error += abs(delta)
+    
+
     if a_accel != b_accel:
         print "(%s, %s, %s, %s) (%s, %s, %s)" % (a_pos[0], a_pos[1], a_pos[2], a_pos[3],
                                                  deltas[0],
                                                  deltas[1],
                                                  deltas[2])
 
+    lines += 1
+
 print "Largest delta: %f" % max_delta 
+print "Total error: %f" % total_error
+print "Avg error / pt: %f" % (total_error / lines)
 
     
     
