@@ -1,0 +1,250 @@
+16a17
+> 
+18c19,20
+< #define SPACE 1000.0f;
+---
+> #define SPACE 1000.0f
+> #define BINS 1000
+22c24
+< 
+---
+> #define BUCKETS 1
+42,43c44,45
+< std::string* loadKernelSource() {
+<   std::ifstream file("src/bruteforce-kernel.cl"); 
+---
+> std::string* loadKernelSource(std::string source) {
+>   std::ifstream file(source.c_str()); 
+50c52,56
+< void runKernel(std::string sourceCode, cl_float4* x)
+---
+> void computeBins(cl::Context& context,
+>                  cl::CommandQueue& queue,
+>                  cl::Program& program,
+>                  cl::Buffer* points_buffer,
+>                  cl::Buffer* cm_buffer)
+51a58,64
+> 
+>     // Make kernel
+>     cl::Kernel kernel(program, "bin");
+> 
+>     // Create memory buffers
+>     cl::Buffer bins_buffer = 
+>       cl::Buffer(context, CL_MEM_WRITE_ONLY, BINS * sizeof(cl_float4));
+53,69c66,67
+<         // Get available platforms
+<         std::vector<cl::Platform> platforms;
+<         cl::Platform::get(&platforms);
+< 
+<         // Select the default platform and create a context using this platform and the GPU
+<         cl_context_properties cps[3] = { 
+<             CL_CONTEXT_PLATFORM, 
+<             (cl_context_properties)(platforms[0])(), 
+<             0 
+<         };
+<         cl::Context context(CL_DEVICE_TYPE_GPU, cps);
+< 
+<         // Get a list of devices on this platform
+<         std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
+< 
+<         // Create a command queue and use the first device
+<         cl::CommandQueue queue = cl::CommandQueue(context, devices[0]);
+---
+>     kernel.setArg(POSITION_BUFFER, *points_buffer);
+>     kernel.setArg(BUCKETS, *cm_buffer);
+71c69,72
+<         cl::Program::Sources source(1, std::make_pair(sourceCode.c_str(), sourceCode.length()+1));
+---
+>     // Run the kernel on specific ND range
+>     cl::NDRange global(BINS);
+>     queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, cl::NullRange);
+> }
+73,74c74,80
+<         // Make program of the source code in the context
+<         cl::Program program = cl::Program(context, source);
+---
+> void sortBins(cl::Context& context,
+>               cl::CommandQueue& queue,
+>               cl::Program& program,
+>               cl::Buffer* position_buffer,
+>               cl::Buffer* offsets_buffer,
+>               cl::Buffer* sorted_bins)
+> {
+76,78c82,142
+<         // Build program for these specific devices
+<     try{
+<         program.build(devices);
+---
+>     // Make kernel
+>     cl::Kernel kernel(program, "sort");
+>     
+>     // Set arguments to kernel
+>     kernel.setArg(0, *position_buffer);
+>     kernel.setArg(1, *offsets_buffer);
+>     kernel.setArg(2, *sorted_bins);
+> 
+>     // Run the kernel on specific ND range
+>     cl::NDRange global(BINS);
+>     queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, cl::NullRange);
+>     
+> }
+> 
+> void genOffsets(cl::Context& context,
+>                 cl::CommandQueue& queue,
+>                 cl::Program& program,
+>                 cl::Buffer* cm_buffer,
+>                 cl::Buffer* offsets_buffer)
+> {
+> 
+>     // Make kernel
+>     cl::Kernel kernel(program, "offsets");
+>     
+>     // Set arguments to kernel
+>     kernel.setArg(0, *cm_buffer);
+>     kernel.setArg(1, *offsets_buffer);
+> 
+>     // Run the kernel on specific ND range
+>     cl::NDRange global(BINS);
+>     queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, cl::NullRange);
+> 
+> }
+> 
+> cl_float4* forces(cl::Context& context,
+>                   cl::CommandQueue& queue,
+>                   cl::Program& program,
+>                   cl::Buffer* position_buffer,
+>                   cl::Buffer* cm_buffer,
+>                   cl::Buffer* offsets_buffer,
+>                   cl::Buffer* bins_buffer)
+> {
+>     cl::Kernel kernel(program, "forces");
+> 
+>     // Create memory buffers
+>     cl::Buffer forces_buffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, POINTS*sizeof(cl_float4));
+>     
+>     // Set arguments to kernel
+>     kernel.setArg(0, *position_buffer);
+>     kernel.setArg(1, *cm_buffer);
+>     kernel.setArg(2, *offsets_buffer);
+>     kernel.setArg(3, *bins_buffer);
+>     kernel.setArg(4, forces_buffer);
+> 
+>     // Run the kernel on specific ND range
+>     cl::NDRange global(POINTS);
+>     queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, cl::NullRange);
+> 
+>     // Read buffer C into a local list
+>     cl_float4* forces = new cl_float4[POINTS];
+>     queue.enqueueReadBuffer(forces_buffer, CL_TRUE, 0, POINTS*sizeof(cl_float4), forces);
+80,81c144,151
+<         // Make kernel
+<         cl::Kernel kernel(program, "nbody");
+---
+>     return forces;
+> }
+> 
+> int main(int argc, char ** argv)
+> {
+>     cl_float4 * x = initializePositions();
+> 
+>     std::string* source = loadKernelSource("src/kernels.cl");
+83c153,155
+<         // Create memory buffers
+---
+>     // Get available platforms
+>     std::vector<cl::Platform> platforms;
+>     cl::Platform::get(&platforms);
+85,86c157,162
+<         cl::Buffer position_buffer = cl::Buffer(context, CL_MEM_READ_ONLY, POINTS * sizeof(cl_float4));
+<         cl::Buffer accelleration_buffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, POINTS * sizeof(cl_float4));
+---
+>     // Select the default platform and create a context using this platform and the GPU
+>     cl_context_properties cps[3] = { 
+>         CL_CONTEXT_PLATFORM, 
+>         (cl_context_properties)(platforms[0])(), 
+>         0 
+>     };
+88,111c164
+<         // Copy lists the memory buffers
+<         queue.enqueueWriteBuffer(position_buffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), x);
+<         
+<         // Set arguments to kernel
+<         //int buffer_size = POINTS;
+<         //kernel.setArg(BUFFER_SIZE, buffer_size);
+<         kernel.setArg(POSITION_BUFFER, position_buffer);
+<         kernel.setArg(ACCELLERATION_BUFFER, accelleration_buffer);
+< 
+<         // Run the kernel on specific ND range
+<         cl::NDRange global(POINTS);
+<         cl::NDRange local(1);
+<         queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, cl::NullRange);
+< 
+<         // Read buffer C into a local list
+<         cl_float4* new_a = new cl_float4[POINTS];
+<         queue.enqueueReadBuffer(accelleration_buffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), new_a);
+< 
+<         for(int i = 0; i < POINTS; i ++) {
+<             printf("(%2.2f,%2.2f,%2.2f,%2.2f) (%2.3f,%2.3f,%2.3f)\n", 
+<                x[i].x, x[i].y, x[i].z, x[i].w,
+<                new_a[i].x, new_a[i].y, new_a[i].z);
+<         }
+<         delete[] new_a;
+---
+>     cl::Context context(CL_DEVICE_TYPE_GPU, cps);
+112a166,178
+>     // Get a list of devices on this platform
+>     std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
+> 
+>     // Create a command queue and use the first device
+>     cl::CommandQueue queue = cl::CommandQueue(context, devices[0]);
+>     cl::Program::Sources sources(1, std::make_pair(source->c_str(), source->length()+1));
+> 
+>     // Make program of the source code in the context
+>     cl::Program program = cl::Program(context, sources);
+> 
+>     // Build program for these specific devices
+>     try{
+>         program.build(devices);
+124a191
+>         exit(0);
+125a193,194
+> 
+>     // Create buffers for points, centers of mass, and bins
+127c196,202
+< }
+---
+>     cl::Buffer pointsBuffer = 
+>       cl::Buffer(context, CL_MEM_READ_ONLY, POINTS * sizeof(cl_float4));
+>     cl::Buffer cmBuffer =  cl::Buffer(context, CL_MEM_READ_WRITE, BINS * sizeof(cl_float4));
+>     cl::Buffer binsBuffer = 
+>       cl::Buffer(context, CL_MEM_READ_WRITE, POINTS * sizeof(unsigned int));
+>     cl::Buffer offsetsBuffer = 
+>       cl::Buffer(context, CL_MEM_READ_WRITE, BINS * sizeof(unsigned int));
+128a204
+>     // Upload points to GPU and compute the centers of mass
+130,132c206,207
+< int main(int argc, char ** argv)
+< {
+<     cl_float4 * x = initializePositions();
+---
+>     queue.enqueueWriteBuffer(pointsBuffer, CL_TRUE, 0, POINTS * sizeof(cl_float4), x);
+>     computeBins(context, queue, program, &pointsBuffer, &cmBuffer);
+134,135c209,223
+<     std::string* source = loadKernelSource();
+<     runKernel(*source, x);
+---
+>     // Generate bin offsets
+> 
+>     genOffsets(context, queue, program, &cmBuffer, &offsetsBuffer);
+> 
+>     // Sort the bins, and then compute all forces
+> 
+>     sortBins(context, queue, program, &pointsBuffer, &offsetsBuffer, &binsBuffer);
+>     cl_float4* a = 
+>       forces(context, queue, program, &pointsBuffer, &cmBuffer, &offsetsBuffer, &binsBuffer);
+> 
+>     for(int i = 0; i < POINTS; i++){
+>         printf("(%2.2f,%2.2f,%2.2f,%2.2f) (%2.3f,%2.3f,%2.3f)\n", 
+>                    x[i].x, x[i].y, x[i].z, x[i].w,
+>                    a[i].x, a[i].y, a[i].z);
+>     }
