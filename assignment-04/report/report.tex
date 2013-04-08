@@ -1,3 +1,4 @@
+
 \documentclass[12pt]{article}
 
 \usepackage[letterpaper, hmargin=0.75in, vmargin=0.75in]{geometry}
@@ -18,18 +19,26 @@
 \maketitle
 
 \section{Design Decisions}
-To produce the optimized OpenCL version we followed two basic ideas. One was that every step of the alorithm
-that depended on a previous step would be a new kernel. This provided the easiest form of synchronization on
-these dependancies. Therefore initially we had three kernels. One to compute bins, one to sort the bins, and 
+To produce the optimized OpenCL version we followed two basic ideas. One was that every 
+step of the algorithm
+that depended on a previous step would be a new kernel. This provided the easiest form of 
+synchronization on
+these dependencies. Therefore initially we had three kernels. One to compute bins, one to 
+sort the bins, and 
 finally one to do the actual body-body interaction.
 
-The second goal was the minimize data transmission between the GPU and CPU. We benchmarked this quickly and
-found it to be comparitively slow. In light of this, we changed a computation that was on the CPU, computing
-offsets for the bin index array, to run on the GPU. This added one more kernel to our program. This let the associated data stay in GPU memory and not require a transfer to CPU memory.
+The second goal was the minimize data transmission between the GPU and CPU. We 
+benchmarked this quickly and
+found it to be comparatively slow. In light of this, we changed a computation that was on 
+the CPU, computing
+offsets for the bin index array, to run on the GPU. This added one more kernel to our 
+program. This let the associated data stay in GPU memory and not require a transfer to 
+CPU memory.
 
 \section{Results}
 
-The performance of the naive OpenCL implementation is given in Table~\ref{tbl-naive-bench} and the optimized 
+The performance of the naive OpenCL implementation is given in Table~\ref{tbl-naive-
+bench} and the optimized 
 version's benchmark is provided by Table~\ref{tbl-opt-bench}.
 
 \begin{table}[H]
@@ -66,9 +75,13 @@ version's benchmark is provided by Table~\ref{tbl-opt-bench}.
   \label{tbl-opt-bench}
 \end{table}
 
-The naive implementation far out performs the sequential CPU-only version, which runs around 15 seconds on ECE459-1. The naive implementation also slightly outperforms the optimized version for 32000 points. The optimization comes with overhead. In addition for this number of points, memory transfer to and from the GPU is most likely
+The naive implementation far out performs the sequential CPU-only version, which runs 
+around 15 seconds on ECE459-1. The naive implementation also slightly outperforms the 
+optimized version for 32000 points. The optimization comes with overhead. In addition for 
+this number of points, memory transfer to and from the GPU is most likely
 the bottle-neck. For larger number of points, the optimization becomes viable.
 %%Should we check this?
 
 
 \end{document}
+
