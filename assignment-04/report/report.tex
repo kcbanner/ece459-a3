@@ -75,13 +75,13 @@ provided by Table~\ref{tbl-opt-bench}.
   \label{tbl-opt-bench}
 \end{table}
 
-The naive implementation far out performs the sequential CPU-only version, which runs 
-around 15 seconds on ECE459-1. The naive implementation also slightly outperforms the 
-optimized version for 32000 points. The optimization comes with overhead. In addition for 
-this number of points, memory transfer to and from the GPU is most likely
-the bottle-neck. For larger number of points, the optimization becomes viable.
-%%Should we check this?
-
+The naive implementation far out performs the sequential CPU-only
+version, which runs around 15 seconds on ECE459-1. The naive
+implementation also slightly outperforms the optimized version for
+32000 points. The optimization comes with overhead. In addition for
+this number of points, memory transfer to and from the GPU is most
+likely the bottle-neck. For larger number of points, the optimization
+may become viable.
 
 \end{document}
 
